@@ -1,13 +1,20 @@
 <html>
 <p>My  HTML page</p>
 <p id="CVK"></p>
+
 <script src="tide.js"></script>
 
 <script>
-    var a = "This was done by the vendor";
+var a = "This was done by the vendor";
+const element = document.getElementById("CVK");
+element.innerText = "CVK: SOME CVK";
+document.body.appendChild(element);
+
+function myF(cvk){ // i get called from inside tide.js
     const element = document.getElementById("CVK");
-    element.innerText = "CVK: SOME CVK";
-    document.body.appendChild(element);
-    // how to get "NEW CVK" ?? 
+    element.innerText = cvk;
+}
 </script>
+
+
 </html>

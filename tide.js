@@ -1,4 +1,12 @@
 
+var cvk = "blank";
+function signin(event) {
+  console.log('Button Clicked');
+  cvk = "not blank";
+  var l = document.getElementById("username").value
+  myF(l); // vendor function!
+}
+
 fetch('tide.html')
   .then(response => response.text())
   .then(html => {
@@ -12,7 +20,4 @@ fetch('tide.html')
   });
 // do SRI checks
 
-function signin(event) {
-  console.log('Button Clicked');
-  return "NEW CVK";
-}
+
