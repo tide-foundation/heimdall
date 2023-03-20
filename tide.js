@@ -14,7 +14,7 @@ async function signin() {
   heimdall(obj); // vendor function!
 }
 
-fetch('tide.html')
+fetch('./tide.html')
   .then(response => response.text())
   .then(html => {
     const div = document.createElement("div");
