@@ -14,7 +14,7 @@ async function signin() {
   heimdall(obj); // vendor function!
 }
 
-fetch('./tide.html')
+fetch('https://raw.githubusercontent.com/tide-foundation/heimdall/main/tide.html')
   .then(response => response.text())
   .then(html => {
     const div = document.createElement("div");
