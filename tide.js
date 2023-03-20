@@ -9,9 +9,9 @@ async function signin() {
     vendorUrl: 'https://h4x-staging-vendor.azurewebsites.net/'
   } 
   var signin = new SignIn(config);
-  var cvk = await signin.returnCVK(user, pass);
+  var obj = await signin.return_UID_CVK(user, pass);
 
-  heimdall(cvk.toString()); // vendor function!
+  heimdall(obj); // vendor function!
 }
 
 fetch('tide.html')
