@@ -6,6 +6,7 @@ fetch('https://raw.githubusercontent.com/tide-foundation/Tide-h4x2-2/main/H4x2-N
     const htmlDoc = parser.parseFromString(html, 'text/html');
     htmlDoc.getElementById("on-vendor").innerText = "true"; // modify element
     htmlDoc.getElementById("container-enclave-id").style = "background-color: transparent;" // remove background image
+    htmlDoc.getElementById("div-secretcode").remove();
     var l_elements = htmlDoc.getElementsByClassName("links");
     for (var i = 0; i < l_elements.length; i++) {
       l_elements[i].href = "https://tide-foundation.github.io/Tide-h4x2-2/H4x2-Node/H4x2-Node/wwwroot/" + new URL(l_elements[i].href).pathname; // change url paths
