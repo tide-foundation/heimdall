@@ -3,7 +3,7 @@
 ## Usage
 Add this line to the top of your html page
 ```<script type="module" src="https://tide-foundation.github.io/heimdall/tide.js"></script>```
-Inside the ```<script>``` tags, add a function called ```heimdall()``` like this:
+Inside another set of ```<script>``` tags, add a function called ```heimdall()``` like this:
 ```
 <script>
         function heimdall(obj){ // i get called from inside tide.js
