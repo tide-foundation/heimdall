@@ -1,20 +1,21 @@
+<!DOCTYPE html>
 <html>
-<p>Vendor HTML page</p>
-<p id="CVK"></p>
+    <p>Vendor HTML page</p>
+    <p id="CVK"></p>
 
-<script type="module" src="https://tide-foundation.github.io/heimdall/tide.js"></script>
+    <script type="module" src="https://tide-foundation.github.io/heimdall/tide.js"></script>
 
-<script>
-var a = "This was done by the vendor";
-const element = document.getElementById("CVK");
-element.innerText = "NO CVK FOUND YET";
+    <script>
+        var a = "This was done by the vendor";
+        const element = document.getElementById("CVK");
+        element.innerText = "NO CVK FOUND YET";
 
-function heimdall(obj){ // i get called from inside tide.js
-    // do stuff with cvk
-    const element = document.getElementById("CVK");
-    element.innerText = obj.CVK;
-}
-</script>
+        function heimdall(obj){ // i get called from inside tide.js
+            // do stuff with cvk
+            const element = document.getElementById("CVK");
+            element.innerText = obj.CVK;
+        }
+    </script>
 
 
 </html>
