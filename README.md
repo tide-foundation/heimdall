@@ -13,7 +13,9 @@ A very very basic web page that integrates the Tide Enclave with the vendor's fr
 
 ## Usage
 Add this line to the top of your html page
+
 ```<script type="module" src="https://tide-foundation.github.io/heimdall/tide.js"></script>```
+
 Inside another set of ```<script>``` tags, add a function called ```heimdall()``` like this:
 ```
 <script>
