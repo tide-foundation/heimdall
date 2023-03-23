@@ -1,3 +1,89 @@
+		Tide Community Open Code License
+
+	Preamble:
+	  The Tide Community Open Code License is a copyright License for 
+	software and other kinds of works designed to encourage the adoption 
+	of the Tide Protocol.  The aim of the Tide Protocol is to be the technological
+	infrastructure of a true zero-trust paradigm, addressing the data-breach
+	protection needs of platform vendors and their customers, the 
+	self-sovereign authority needs of online users, and replace the reliance 
+	on blind trust with proofs.
+
+	  To that end, the Tide Community Open Code License gives you the 
+	freedom to modify and distribute copies of software and other works 
+	for free, or for a fee, as long as you do so in accordance with these 
+	terms and the software adopts the Tide Protocol in full.
+
+	License Terms
+	Version: 2
+	Date of last revision: 1 December 2022
+
+	1	Acceptance of these terms
+	  (a)	These terms are between the copyright holder (“we”, “us” and 
+		“our”) identified in the notice embedded in or provided with 
+		the source code, technical documentation or other material 
+		relating to the Tide Foundation Limited’s (ACN 630 011 371) 
+		(“Tide”) data decryption and key management platform 
+		known as the “Tide Protocol” (“Tide Protocol”) and with which 
+		these terms are packaged (“Materials”) and the person or 
+		entity (“you” and “your”) accessing and/or using the Materials.
+	  (b)	By using, modifying or publishing the Materials or any Modified
+		Materials (as defined in clause 2(c) below), you agree to be 
+		bound by these terms.  If you are doing any of the foregoing in 
+		the context of your employment with your employer or on behalf 
+		of another entity, you are agreeing to be bound by these terms 
+		on behalf of that employer or other entity and you represent 
+		and warrant that you have the authority of that employer or 
+		other entity to enter into these terms on their behalf. In such 
+		circumstances, each reference in these terms “you” or “your” 
+		includes that employer or other entity. 
+	  (c)	These terms will remain in effect until terminated under 
+		clause 9.
+
+	2	Intellectual property rights
+	  (a)	In these terms, “Intellectual Property Rights” means all 
+		intellectual property rights of whatever nature throughout the 
+		world, including all rights conferred under statute, common 
+		law or equity, whether existing now or at any time in the 
+		future, including all rights in and to any patents, patent 
+		applications, business names, trade names, domain names, trade 
+		marks, copyright, trade secrets, circuit layout rights, 
+		designs, confidential information, know-how, technical 
+		information, data or developments. All of our Intellectual 
+		Property Rights are protected by the laws in force in 
+		Australia from time to time.
+	  (b)	You acknowledge and agree that we (or our licensors) retain all
+		right, title, and interest (including all Intellectual Property 
+		Rights) in and to the Materials, and nothing you do with or in 
+		relation to the Materials will transfer any right, title or 
+		interest (including Intellectual Property Rights) to you or 
+		License or otherwise permit you to exercise any Intellectual 
+		Property Rights except as expressly granted under these terms.
+	  (c)	In these terms, “Modified Materials” means any work based on 
+		one or more of the Materials, including a revision, 
+		modification, adaptation, subset, addition, enhancement, 
+		improvement, combination, translation, abridgment, 
+		condensation, expansion, collection, compilation or any other 
+		form in which such Materials may be recast, transformed or 
+		adapted or any other new material derived from the Materials.
+
+	3	Your License to the Materials 
+	  (a)	Subject to paragraph (c) below and your compliance with these 
+		terms, we grant you a limited, non-exclusive,  
+		non-sub-licensable, revocable, worldwide, royalty free License 
+		for the term of these terms to access, use, copy, modify, 
+		adapt, distribute, publish and exploit the Materials, provided 
+		that such License is exercised:
+		(i)	solely in connection with the adoption and use of the 
+			Tide Protocol;
+		(ii)	solely in a manner which requires any payment or 
+			exchange of value to be made via Tide Tokens (as 
+			defined in paragraph (c) below); and
+		(iii)	in accordance with clause 6 and on these terms in 
+			respect of the right to distribute and publish the 
+			Materials and Modified Materials.
+		The foregoing rights to distribute, publish and exploit the 
+		Materials include the right to do so for a fee and applies 
 		in respect of the Materials and the Modified Materials. 
 	  (b)	Any access, use, copy, modification, adaptation, distribution, 
 		publication or exploitation of any of the Materials for use 
