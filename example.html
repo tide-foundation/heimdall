@@ -1,9 +1,7 @@
 <html>
 <p>Vendor HTML page</p>
 <p id="CVK"></p>
-<p>----Everything underneath is part of tide.html-----</p>
 
-<script src="conf.js"></script>
 <script type="module" src="tide.js"></script>
 
 <script>
@@ -11,10 +9,10 @@ var a = "This was done by the vendor";
 const element = document.getElementById("CVK");
 element.innerText = "NO CVK FOUND YET";
 
-function heimdall(cvk){ // i get called from inside tide.js
+function heimdall(obj){ // i get called from inside tide.js
     // do stuff with cvk
     const element = document.getElementById("CVK");
-    element.innerText = cvk;
+    element.innerText = obj.CVK;
 }
 </script>
 
