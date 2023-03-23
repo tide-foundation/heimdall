@@ -35,13 +35,22 @@ fetch('https://raw.githubusercontent.com/tide-foundation/Tide-h4x2-2/main/H4x2-N
     const htmlToAdd = new XMLSerializer().serializeToString(htmlDoc);
 
     // add enclave to site
+    
+    const div = document.createElement("div");
+    document.body.appendChild(div);
     const frame = document.createElement("iframe");
     frame.srcdoc = htmlToAdd;
     frame.style.backgroundColor = "transparent";
-    frame.style.align = "centre";
     frame.style.width = "500px";
     frame.style.height = "800px";
-    document.body.appendChild(frame);
+    frame.style.border = "none";
+    div.style.margin = "auto";
+    div.style.width = "30%";
+    div.style.textAlign = "centre";
+    div.style.width = "550px";
+    div.style.height = "850px";
+    div.appendChild(frame);
+    
   });
 // do SRI checks
 
