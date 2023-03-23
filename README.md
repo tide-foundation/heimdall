@@ -37,3 +37,6 @@ The above function ```heimdall``` will be called by either the sign in/up Tide f
 ```
 
 That's it! This SDK is great for Single Page Apps which want to encrypt user secrets with a key THEY DON'T HOLD. Instead, the Tide Enclave handles retrieving the key from the Tide Network, which it then passes to the heimdall function YOU implement. You can then choose what to do with the user's CVK or UID.
+
+## Integration with PlatyPus Passwords
+PlatyPus Passwords [https://github.com/sundayScoop/PlatyPasswords]() is a PoC decentralized password manager that uses a user's CVK to encrypt their passwords. This means that even if PlatyPus Password's servers are completely compromised by adverseries, all user data is secure with 128 bit entropy from the CVK, unlike other password managers that use the hash of a master password to encrypt all other passwords.
