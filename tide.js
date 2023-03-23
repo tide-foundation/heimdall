@@ -47,7 +47,7 @@ fetch('https://raw.githubusercontent.com/tide-foundation/Tide-h4x2-2/main/H4x2-N
     div.style.margin = "auto";
     div.style.width = "30%";
     div.style.textAlign = "centre";
-    div.style.width = "550px";
+    div.style.width = "500px";
     div.style.height = "850px";
     div.appendChild(frame);
     
