@@ -1,4 +1,217 @@
-# Heimdall
+# Heimdall JavaScript SDK
+
+## Terms
+1. ORKs - Nodes of the Tide Network that authenticate users and hold their keys.
+2. CVK  - (Consumer Vendor Key) A key associated with each user in the network, held in the ORKs that authenticate the user.
+3. UID  - (Unique ID) A unique identifier of a user in the Tide Network, created by hashing the user's username.
+
+## Installation
+```
+import { signIn, signUp, AES, Utils, EdDSA, Point, Hash } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
+```
+
+## Available Functions
+```
+SDK Commands:
+  signIn.start_Heimdall     Authenticate a user and retrieve their CVK and UID
+  signUp.start_Heimdall     Create a new user in the network and retrive their CVK and UID once the process completes
+  AES.encryptData           Encrypt data given a 32 byte key using AES GCM.
+  AES.decryptData           Decrypt encrypted data given a 32 byte key using AES GCM.
+  EdDSA.sign                Sign data given a private key using EdDSA.
+  EdDSA.verify              Verify a signature provided a public key and data to verify.
+  Point                     Provides access to low level point arithmetic and serialization functions for Ed25519 points.           
+  Hash.SHA256_Digest        Hash data using SHA256.
+  Hash.SHA512_Digest        Hash data using SHA512.
+  Utils                     Provides a wide range of functions for serialization and conversions of Base64, Bytes, Hex, String and BigInt.
+```
+## Usage
+### signIn
+#### start_Heimdall
+```
+Parameters:
+(username: string, password: string)
+
+Returns:
+Promise of Object
+{
+    CVK: BigInt,
+    UID: string
+}
+```
+### signUp
+#### start_Heimdall
+```
+Parameters:
+(username: string, password: string)
+
+Returns:
+Promise of Object
+{
+    CVK: BigInt,
+    UID: string
+}
+```
+### AES
+#### encryptData
+```
+Parameters:
+(secretData: string|Uint8Array, key: Uint8Array|CryptoKey|bigint|string)
+
+Returns:
+Promise of a base64 string of the encrypted data.
+```
+#### decryptData
+
+```
+Parameters:
+(encryptedData: string, key: Uint8Array|CryptoKey|bigint|string)
+
+Returns:
+Promise of a basic ASCII string of the decrypted data.
+```
+### EdDSA
+#### sign
+```
+Parameters:
+(msg: string|Uint8Array, priv: bigint)
+
+Returns:
+Promise of a base64 encoded EdDSA signature.
+```
+#### verify
+```
+Parameters:
+(sig: string, pub: string|Point, msg: string|Uint8Array)
+
+Returns:
+Promise of a boolean of whether the signature is valid or not.
+```
+### Point
+```
+Static values:
+Point.g                       Ed25519 Base Point
+
+Functions:
+times(num: bigint)      Returns a point multiplied by specificied num
+add(other: Point)       Returns a point summed with another point
+toBase64()              Returns base64 encoding of point. Used to send point across network.
+fromB64(data: string)   Returns a point object provided a 
+```
+### Hash
+#### SHA256_Digest
+```
+Parameters:
+(message: string|Uint8Array)
+
+Returns:
+Promise of a Uint8Array
+```
+#### SHA512_Digest
+```
+Parameters:
+(message: string|Uint8Array)
+
+Returns:
+Promise of a Uint8Array
+```
+### Utils
+#### RandomBigInt
+```
+Paramteres:
+None
+
+Returns:
+BigInt
+```
+#### BigIntToByteArray
+```
+Parameters:
+(num: BigInt)
+
+Returns:
+Uint8Array
+```
+#### BigIntFromByteArray
+```
+Parameters:
+(bytes: Uint8Array)
+
+Returns:
+BigInt
+```
+#### ConcatUint8Arrays
+```
+Parameteres:
+(arrays: Uint8Array[])
+
+Returns:
+Uint8Array
+```
+#### StringToUint8Array
+```
+Parameters:
+(string: string)
+
+Returns:
+Uint8Array
+```
+#### Hex2Bytes
+```
+Parameters: 
+(string: string)
+
+Returns:
+Uint8Array
+```
+#### Bytes2Hex
+```
+Parameters:
+(byteArray: Uint8Array)
+
+Returns:
+String encoded in hexadecimal
+```
+#### bytesToBase64
+```
+Parameters:
+(bytes: Uint8Array)
+
+Returns:
+String encoded in base64
+```
+#### base64ToBytes
+```
+Parameters:
+(str: string)
+
+Returns:
+Uint8Array
+```
+
+## Examples
+### signIn
+```
+var obj = await signIn.start_Heimdall('username1', 'password1');
+console.log(obj.CVK); // bigint
+console.log(obj.UID) // string encoded in hex
+```
+### signUp
+```
+var obj = await signUp.start_Heimdall('username2', 'password2');
+console.log(obj.CVK); // bigint
+console.log(obj.UID) // string encoded in hex
+```
+### AES
+```
+var priv_key = BigInt(123456);
+var msg = "some data";
+
+var encrypted = await AES.encryptData(msg, priv_key);
+var decrypted = await AES.decryptData(encrypted, priv_key);
+```
+### EdDSA
+
+
 
 ## What is Heimdall?
 Heimdall is a JS SDK built to allow developers to secure user secrets without holding any keys. Heimdall (yes, the one from Norse mythology) creates a bridge between a vendor's client application and the user's identity (username + password). The only thing that crosses this bridge is the user's CVK, which is securely retrieved from Tide's decentralized network of authentication nodes. The vendor can now secure user data from the client side, without ever needing:
