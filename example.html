@@ -1,21 +1,28 @@
 <!DOCTYPE html>
 <html>
-    <script type="module" src="https://tide-foundation.github.io/heimdall/tide.js"></script>
-
-    <p>Vendor HTML page</p>
+      
+    <body>
+        <p>Vendor HTML page</p>
     <p id="CVK"></p>
-    <script>
-        var a = "This was done by the vendor";
-        const element = document.getElementById("CVK");
-        element.innerText = "NO CVK FOUND YET";
 
-        function heimdall(obj){ // i get called from inside tide.js
-            // do stuff with cvk
-            const element = document.getElementById("CVK");
-            element.innerText = obj.CVK;
-        }
+    <script type="module">
+        import { signIn, signUp, EdDSA } from './heimdall.js';
+        var key = BigInt(10);
+        var msg = "heythere";
+
+        //var encrytped = await EdDSA.sign(msg, key)
+        //console.log(encrytped);
+        
+        //var obj = await signUp.start_Heimdall('780911211', '780911211');
+        //console.log(obj.CVK);
+    </script>  
+    <script>
+        
     </script>
 
+    </body>
+    
+    
     
 
 
