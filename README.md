@@ -10,20 +10,17 @@
 import { signIn, signUp, AES, Utils, EdDSA, Point, Hash } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
 ```
 
-## Available Functions
-```
-SDK Commands:
-  signIn.start_Heimdall     Authenticate a user and retrieve their CVK and UID
-  signUp.start_Heimdall     Create a new user in the network and retrive their CVK and UID once the process completes
-  AES.encryptData           Encrypt data given a 32 byte key using AES GCM.
-  AES.decryptData           Decrypt encrypted data given a 32 byte key using AES GCM.
-  EdDSA.sign                Sign data given a private key using EdDSA.
-  EdDSA.verify              Verify a signature provided a public key and data to verify.
-  Point                     Provides access to low level point arithmetic and serialization functions for Ed25519 points.           
-  Hash.SHA256_Digest        Hash data using SHA256.
-  Hash.SHA512_Digest        Hash data using SHA512.
-  Utils                     Provides a wide range of functions for serialization and conversions of Base64, Bytes, Hex, String and BigInt.
-```
+## SDK Functions
+| Function          | Description                                                                                                    |
+|-------------------|----------------------------------------------------------------------------------------------------------------|
+| [signIn](#signin) | Authenticate a user and retrieve their CVK and UID                                                             |
+| [signUp](#signup) | Create a new user in the network and retrieve their CVK and UID once the process completes                     |
+| [AES](#aes)       | Encrypt/Decrypt data given a 32 byte key using AES GCM.                                                        |
+| [EdDSA](#eddsa)   | Sign/Verify data given a private and public keys using EdDSA.                                                  |
+| [Point](#point)   | Provides access to low level point arithmetic and serialization functions for Ed25519 points.                  |
+| [Hash](#hash)     | Hash data using SHA256 and SHA512.                                                                             |
+| [Utils](#utils)   | Provides a wide range of functions for serialization and conversions of Base64, Bytes, Hex, String and BigInt. |
+
 ## Usage
 ### signIn
 #### start_Heimdall
@@ -83,19 +80,22 @@ Promise of a base64 encoded EdDSA signature.
 Parameters:
 (sig: string, pub: string|Point, msg: string|Uint8Array)
 
+Remarks:
+pub paramter can either be a Point object, or a base64 encoded point, obtained from point.toBase64().
+
 Returns:
 Promise of a boolean of whether the signature is valid or not.
 ```
 ### Point
 ```
 Static values:
-Point.g                       Ed25519 Base Point
+Point.g                 Ed25519 Base Point
 
 Functions:
-times(num: bigint)      Returns a point multiplied by specificied num
-add(other: Point)       Returns a point summed with another point
+times(num: bigint)      Returns a point multiplied by specificied num.
+add(other: Point)       Returns a point summed with another point.
 toBase64()              Returns base64 encoding of point. Used to send point across network.
-fromB64(data: string)   Returns a point object provided a 
+fromB64(data: string)   Returns a point object provided a base64 encoded string.
 ```
 ### Hash
 #### SHA256_Digest
@@ -191,26 +191,42 @@ Uint8Array
 ## Examples
 ### signIn
 ```
+import { signIn } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
+
 var obj = await signIn.start_Heimdall('username1', 'password1');
 console.log(obj.CVK); // bigint
 console.log(obj.UID) // string encoded in hex
 ```
 ### signUp
 ```
+import { signUp } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
+
 var obj = await signUp.start_Heimdall('username2', 'password2');
 console.log(obj.CVK); // bigint
 console.log(obj.UID) // string encoded in hex
 ```
 ### AES
 ```
+import { AES } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
+
 var priv_key = BigInt(123456);
 var msg = "some data";
 
 var encrypted = await AES.encryptData(msg, priv_key);
-var decrypted = await AES.decryptData(encrypted, priv_key);
+var decrypted = await AES.decryptData(encrypted, priv_key); 
 ```
 ### EdDSA
+```
+import { EdDSA } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
 
+var priv_key = BigInt(123456);
+var pub_key = Point.g.times(priv_key).toBase64(); // create public key from private key
+var msg = "some data";
+
+var sig = await EdDSA.sign(msg, priv_key); // base64 signature
+var valid = await EdDSA.verify(sig, pub_key, msg); // boolean
+
+```
 
 
 ## What is Heimdall?
