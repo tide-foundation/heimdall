@@ -217,7 +217,7 @@ var decrypted = await AES.decryptData(encrypted, priv_key);
 ```
 ### EdDSA
 ```
-import { EdDSA } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
+import { EdDSA, Point } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
 
 var priv_key = BigInt(123456);
 var pub_key = Point.g.times(priv_key).toBase64(); // create public key from private key
