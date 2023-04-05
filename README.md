@@ -208,7 +208,7 @@ var decrypted = await AES.decryptData(encrypted, priv_key);
 import { EdDSA } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
 
 var priv_key = BigInt(123456);
-var pub_key = PublicFromPrivate(priv_key).toBase64(); // create public key from private key
+var pub_key = EdDSA.PublicKey.fromPrivate(priv_key); // create public key from private key
 var msg = "some data";
 
 var sig = await EdDSA.sign(msg, priv_key); // base64 signature
