@@ -6,15 +6,17 @@
     <p id="CVK"></p>
 
     <script type="module">
-        import { signIn, signUp, AES, Utils, EdDSA, Hash } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
+        import { signIn, signUp, AES, Utils, EdDSA, Hash } from './heimdall.js';
         var priv_key = BigInt(123456);
+        var pub_key = EdDSA.PublicKey.fromPrivate(priv_key); // create public key from private key
+        console.log(pub_key);
         var msg = "some data";
 
-        var encrypted = await AES.encryptData(msg, priv_key);
-        var decrypted = await AES.decryptData(encrypted, priv_key);
+        var sig = await EdDSA.sign(msg, priv_key);
+        var valid = await EdDSA.verify(sig, pub_key, msg);
         
-        console.log(encrypted);
-        console.log(decrypted);
+        console.log(sig);
+        console.log(valid);
     </script>  
     <script>
         
