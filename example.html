@@ -6,15 +6,15 @@
     <p id="CVK"></p>
 
     <script type="module">
-        import { signIn, signUp, EdDSA } from './heimdall.js';
-        var key = BigInt(10);
-        var msg = "heythere";
+        import { signIn, signUp, AES, Utils, EdDSA, Hash } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
+        var priv_key = BigInt(123456);
+        var msg = "some data";
 
-        //var encrytped = await EdDSA.sign(msg, key)
-        //console.log(encrytped);
+        var encrypted = await AES.encryptData(msg, priv_key);
+        var decrypted = await AES.decryptData(encrypted, priv_key);
         
-        //var obj = await signUp.start_Heimdall('780911211', '780911211');
-        //console.log(obj.CVK);
+        console.log(encrypted);
+        console.log(decrypted);
     </script>  
     <script>
         

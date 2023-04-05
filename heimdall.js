@@ -26,4 +26,4 @@ const default_config = {
 const signIn = new SignIn(default_config);
 const signUp = new SignUp(default_config);
 
-export { signIn, signUp, AES, Utils, EdDSA, Hash }
+export { signIn, signUp, AES, Utils, EdDSA, Hash, Point }
