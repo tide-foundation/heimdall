@@ -7,7 +7,7 @@
 
 ## Installation
 ```javascript
-import { signIn, signUp, AES, Utils, EdDSA, Point, Hash } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
+import { signIn, signUp, AES, Utils, EdDSA, Hash } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
 ```
 
 ## SDK Functions
