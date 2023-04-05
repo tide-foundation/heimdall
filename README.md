@@ -77,10 +77,10 @@ Promise of a base64 encoded EdDSA signature.
 #### verify
 ```
 Parameters:
-(sig: string, pub: string|Point, msg: string|Uint8Array)
+(sig: string, pub: string|PublicKey, msg: string|Uint8Array)
 
 Remarks:
-pub paramter can either be a Point object, or a base64 encoded point, obtained from point.toBase64().
+PublicKey can be generated with EdDSA.PublicKey.fromPrivate(priv)
 
 Returns:
 Promise of a boolean of whether the signature is valid or not.
