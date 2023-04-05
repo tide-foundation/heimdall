@@ -16,7 +16,7 @@ import { signIn, signUp, AES, Utils, EdDSA, Hash } from 'https://cdn.jsdelivr.ne
 | [signIn](#signin) | Authenticate a user and retrieve their CVK and UID                                                             |
 | [signUp](#signup) | Create a new user in the network and generate their CVK and UID                                                |
 | [AES](#aes)       | Encrypt/Decrypt data given a 32 byte key using [AES-GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode).   |
-| [EdDSA](#eddsa)   | Sign/Verify data given a private and public keys using EdDSA.                                                  |
+| [EdDSA](#eddsa)   | Sign/Verify data given a private and public keys using [EdDSA](https://en.wikipedia.org/wiki/EdDSA).           |
 | [Hash](#hash)     | Hash data using [SHA256 and SHA512](https://en.wikipedia.org/wiki/SHA-2).                                      |
 | [Utils](#utils)   | Provides a wide range of functions for serialization and conversions of Base64, Bytes, Hex, String and BigInt. |
 
