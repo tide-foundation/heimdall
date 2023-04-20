@@ -7,7 +7,7 @@
 
 ## Installation
 ```javascript
-import { signIn, signUp, AES, Utils, EdDSA, Hash } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
+import { signIn, signUp, AES, Utils, EdDSA, Hash, KeyExchange } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
 ```
 
 ## SDK Functions
@@ -19,6 +19,7 @@ import { signIn, signUp, AES, Utils, EdDSA, Hash } from 'https://cdn.jsdelivr.ne
 | [EdDSA](#eddsa)   | Sign/Verify data given a private and public keys using [EdDSA](https://en.wikipedia.org/wiki/EdDSA).           |
 | [Hash](#hash)     | Hash data using [SHA256 and SHA512](https://en.wikipedia.org/wiki/SHA-2).                                      |
 | [Utils](#utils)   | Provides a wide range of functions for serialization and conversions of Base64, Bytes, Hex, String and BigInt. |
+| [KeyExchange](#keyexchange) | Establish and maintain a secret key between two users.                                           |
 
 ## Usage
 ### signIn
@@ -175,6 +176,48 @@ Parameters:
 Returns:
 Uint8Array
 ```
+### KeyExchange
+#### start
+```
+Parameters: 
+(my_cvk: BigInt, my_uid: string, other_uid: string)
+
+Returns:
+{
+    session_key: string - base64 AES key,
+    to_send: string - send this data to other client wishing to establish shared secret
+}
+```
+#### establish
+```
+Parameters:
+(sent_data: string, my_cvk: BigInt)
+
+Returns:
+{
+    session_key: string - base64 AES key (the same created in 'start' function),
+    other_uid: string - the uid of the user who provided 'sent_data' data
+}
+```
+#### store_session_key
+```
+Parameters:
+(my_cvk: BigInt, other_uid: string, session_key: string)
+
+Remarks:
+Will store session_key encrypted with the CVK in localStorage. other_uid is used to identify the session key stored.
+
+Returns:
+None
+```
+#### get_session_key
+```
+Parameters:
+(my_cvk: BigInt, other_uid: string)
+
+Returns:
+string - Base64 AES key
+```
 
 ## Examples
 ### signIn
@@ -213,6 +256,28 @@ var msg = "some data";
 
 var sig = await EdDSA.sign(msg, priv_key); // base64 signature
 var valid = await EdDSA.verify(sig, pub_key, msg); // boolean
+
+```
+### KeyExchange
+```javascript
+import { KeyExchange } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js';
+
+var cvk1 = BigInt("96572544179587609705207997177575945883340731486940760508470570103787353305"); // cvk of user1
+var cvk2 = BigInt("5176121613103035642549637242454417009050231022047032524491938228551868530590"); // cvk of user2
+
+var uid1 = "76e34c4548e2a2975f9305a557607abb7f3865a9bd592a7e7624a55a77d2f24b"; // uid of user1
+var uid2 = "29a3c59705f35e99740059a09ad037a82d5b9bc1eb743930d15a7c368d10a988"; // uid of user2
+
+const {session_key: sk, to_send} = await KeyExchange.start(cvk1, uid1, uid2); // initiate key exchange - typically you would then send 'to_send" however means necessary to user2
+
+const {session_key: sk_received, other_uid: uid_check} = await KeyExchange.establish(to_send, cvk2); // finish key exchange given data 'sent_data' from user1
+
+var check = sk === sk_received && uid1 === uid_check; // check secret key received is same as the one sent, check that uid recieved is the one from the sender (user1)
+
+//-------------------------------------------------------------------------------------------------
+
+await KeyExchange.store_session_key(cvk1, uid2, sk); // example of storing session key in browser
+const sk_browser = await KeyExchange.get_session_key(cvk1, uid2); // exmaple of retrieving session key from browser
 
 ```
 
