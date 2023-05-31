@@ -1,5 +1,7 @@
 # Heimdall JavaScript SDK
 
+## This repo is part of the FIRST PHASE code. All repos that have this message interact and use one another in some way.
+
 ## Terms
 1. ORKs - (Orchestrated Recluder of Keys) Nodes of the Tide Network that authenticate users and hold their keys.
 2. CVK  - (Consumer-Vendor Key) A key associating each user on the network with a vendor/application, held in the ORKs that authenticate the user.
