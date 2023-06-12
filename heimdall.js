@@ -27,7 +27,7 @@ export function AddTideButton(vendorPublic, vendorAuthRedirectUrl, homeORKUrl){
     button.textContent = "Tide Button";
     const redirectToOrk = () => {
         // open pop up window with vendorPublic and this window's location in URL
-        window.open(homeORKUrl + `?vendorPublic=${vendorPublic}&vendorUrl=${window.location.href}&vendorOrks=0`, 'popup', 'width=800,height=800');
+        window.open(homeORKUrl + `?vendorPublic=${vendorPublic}&vendorUrl=${encodeURIComponent(window.location.href)}&vendorOrks=0`, 'popup', 'width=800,height=800');
     }
     button.addEventListener('click', redirectToOrk);
     document.body.appendChild(button); // add button to page
@@ -43,16 +43,16 @@ export function AddTideButton(vendorPublic, vendorAuthRedirectUrl, homeORKUrl){
         const decoded = info.split(".")
             .map(a => a.replace(/-/g, '+').replace(/_/g, '/') + "==".slice(0, (3 - a.length % 4) % 3));
 
-        decoded[0] = atob(decoded[0]) // header 
-        decoded[1] = atob[decoded[1]] // payload
+        const header = atob(decoded[0]) // header 
+        const payload = atob(decoded[1]) // payload
 
         if(decoded.length != 3) throw Error("Heimdall: JWT malformed")
         
         try{
-            let test_data = JSON.parse(decoded[0])
+            let test_data = JSON.parse(header)
             if(test_data.typ != "JWT" || test_data.alg != "EdDSA") throw Error()
-            test_data = JSON.parse(decoded[1])
-            if(test_data.uid == null || test_data.exp == null) throw Error() ////// REMEMBER TO ADD IAT TO JWT!!!
+            test_data = JSON.parse(payload)
+            if(test_data.uid == null || test_data.exp == null) throw Error()
         }catch{
             throw Error("Heimdall: JWT did not include the correct information")
         }
@@ -62,5 +62,3 @@ export function AddTideButton(vendorPublic, vendorAuthRedirectUrl, homeORKUrl){
     }, false);
     return button;
 }
-
-export { signIn, signUp, AES, Utils, EdDSA, Hash, KeyExchange }

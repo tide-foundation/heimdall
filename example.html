@@ -3,26 +3,11 @@
       
     <body>
         <p>Vendor HTML page</p>
-    <p id="CVK"></p>
-    <p id="send"></p>
 
     <script type="module">
-        import { KeyExchange } from './heimdall.js';
+        import { AddTideButton } from './heimdall.js';
 
-        var cvk1 = BigInt("96572544179587609705207997177575945883340731486940760508470570103787353305");
-        var cvk2 = BigInt("5176121613103035642549637242454417009050231022047032524491938228551868530590");
-        var uid1 = "76e34c4548e2a2975f9305a557607abb7f3865a9bd592a7e7624a55a77d2f24b";
-        var uid2 = "29a3c59705f35e99740059a09ad037a82d5b9bc1eb743930d15a7c368d10a988";
-        const {session_key: sk, to_send} = await KeyExchange.start(cvk1, uid1, uid2);
-
-        await KeyExchange.store_session_key(cvk1, uid2, sk);
-        const sk_check2 = await KeyExchange.get_session_key(cvk1, uid2);
-
-        const {session_key: sk_check, other_uid: uid_check} = await KeyExchange.establish(to_send, cvk2);
-
-        var check = sk === sk_check && sk === sk_check2 && uid1 === uid_check;
-
-        console.log(check);
+        const button = AddTideButton("some public", window.location.origin + "/testAuth", "http://localhost:1002");
 
     </script>  
     <script>
