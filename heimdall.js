@@ -17,22 +17,31 @@
 
 /**
  * Add the Tide Button to any website. You just need a public key and the URL of an ORK you trust.
- * @param {string} vendorPublic Make sure to create some public key for this
- * @param {string} vendorAuthRedirectUrl Where you want to redirect the user with a valid jwt
- * @param {string} homeORKUrl Just the origin. For example => https://someOrk.com
+ * @example
+ * {
+ * vendorPublic: string //Make sure to create some public key for this
+ * vendorAuthRedirectUrl: string //Where you want to redirect the user with a valid jwt
+ * vendorUrlSignature: string //The value of this web page's URL (window.location.href) signed (EdDSA) with this vendor's VVK.
+ * homeORKUrl: string //Just the origin. For example => https://someOrk.com
+ * }
+ * @param {object} config
  * @returns {HTMLButtonElement} The Tide button object so you can modity it's CSS and stuff
  */
-export function AddTideButton(vendorPublic, vendorAuthRedirectUrl, homeORKUrl){
+export function AddTideButton(config){
+    if (!Object.hasOwn(config, 'vendorPublic')) { throw Error("No vendor public key has been included in config") }
+    if (!Object.hasOwn(config, 'vendorAuthRedirectUrl')) { throw Error("No auth redirect url has been included in config") }
+    if (!Object.hasOwn(config, 'vendorUrlSignature')) { throw Error("No vendor url sig has been included in config") }
+    if (!Object.hasOwn(config, 'homeORKUrl')) { throw Error("No home ork URL has been included in config") }
     const button = document.createElement('button');
     button.textContent = "Tide Button";
     const redirectToOrk = () => {
         // open pop up window with vendorPublic and this window's location in URL
-        window.open(homeORKUrl + `?vendorPublic=${vendorPublic}&vendorUrl=${encodeURIComponent(window.location.href)}&vendorOrks=0`, 'popup', 'width=800,height=800');
+        window.open(config.homeORKUrl + `?vendorPublic=${encodeURIComponent(config.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.href)}&vendorUrlSig=${encodeURIComponent(config.vendorUrlSignature)}&vendorOrks=0`, 'popup', 'width=800,height=800');
     }
     button.addEventListener('click', redirectToOrk);
     document.body.appendChild(button); // add button to page
     window.addEventListener("message", (event) => {
-        if (event.origin !== homeORKUrl) {
+        if (event.origin !== config.homeORKUrl) {
             // Something's not right... The message has come from an unknown domain... 
             return;
         }
@@ -58,7 +67,7 @@ export function AddTideButton(vendorPublic, vendorAuthRedirectUrl, homeORKUrl){
         }
         
         // redirect to vendor Auth Url  with jwt
-        window.location.replace(vendorAuthRedirectUrl + `?auth_token=${info}`); // redirect user to this vendor's authentication endpoint with auth token
+        window.location.replace(config.vendorAuthRedirectUrl + `?auth_token=${info}`); // redirect user to this vendor's authentication endpoint with auth token
     }, false);
     return button;
 }
