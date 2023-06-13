@@ -20,8 +20,7 @@
  * @example
  * {
  * vendorPublic: string //Make sure to create some public key for this
- * vendorAuthRedirectUrl: string //Where you want to redirect the user with a valid jwt
- * vendorUrlSignature: string //The value of this web page's URL (window.location.href) signed (EdDSA) with this vendor's VVK.
+ * vendorUrlSignature: string //The value of this web page's URL (such as https://www.yoursite.com/login) signed (EdDSA) with this vendor's VVK.
  * homeORKUrl: string //Just the origin. For example => https://someOrk.com
  * }
  * @param {object} config
@@ -29,7 +28,6 @@
  */
 export function AddTideButton(config){
     if (!Object.hasOwn(config, 'vendorPublic')) { throw Error("No vendor public key has been included in config") }
-    if (!Object.hasOwn(config, 'vendorAuthRedirectUrl')) { throw Error("No auth redirect url has been included in config") }
     if (!Object.hasOwn(config, 'vendorUrlSignature')) { throw Error("No vendor url sig has been included in config") }
     if (!Object.hasOwn(config, 'homeORKUrl')) { throw Error("No home ork URL has been included in config") }
     const button = document.createElement('button');
@@ -67,7 +65,7 @@ export function AddTideButton(config){
         }
         
         // redirect to vendor Auth Url  with jwt
-        window.location.replace(config.vendorAuthRedirectUrl + `?auth_token=${info}`); // redirect user to this vendor's authentication endpoint with auth token
+        window.location.replace(window.location.origin + `/tideauth?auth_token=${info}`); // redirect user to this vendor's authentication endpoint with auth token
     }, false);
     return button;
 }
