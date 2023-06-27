@@ -35,7 +35,6 @@ You can then modify the button's style positioning and other stuff by interactin
 ```javascript
 const config = {
   vendorPublic: "bGKZOFa1LUJzgHY1HOVNQdO9iFTuBkB6EvpJiYqSDBs=",
-  vendorAuthRedirectUrl: "http://localhost:5231/tideauth",
   vendorUrlSignature: "Fi/fvZmmwsK2IJfXC9y2Oh0UIabnSBJlS5XYlsSYAxf9OEOK543D6nM5b5Xs2h2GFl93AzJ7yrU1u7fzk4/EDQ==",
   homeORKUrl: "http://localhost:1002"
 }
