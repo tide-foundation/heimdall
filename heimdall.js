@@ -65,7 +65,7 @@ export function AddTideButton(config){
         }
         
         // redirect to vendor Auth Url  with jwt
-        window.location.replace(window.location.origin + `/tideauth?auth_token=${info}`); // redirect user to this vendor's authentication endpoint with auth token
+        window.location.replace(window.location.origin + `/tide/auth?auth_token=${info}`); // redirect user to this vendor's authentication endpoint with auth token
     }, false);
     return button;
 }
