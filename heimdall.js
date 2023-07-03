@@ -14,7 +14,7 @@
 // Code License along with this program.
 // If not, see https://tide.org/licenses_tcoc2-0-0-en
 //
-
+var currentOrkURL = "";
 /**
  * Add the Tide Button to any website. You just need a public key and the URL of an ORK you trust.
  * @example
@@ -32,22 +32,41 @@ export function AddTideButton(config){
     if (!Object.hasOwn(config, 'homeORKUrl')) { throw Error("No home ork URL has been included in config") }
     const button = document.createElement('button');
     button.textContent = "Tide Button";
+    currentOrkURL = config.homeORKUrl;
     const redirectToOrk = () => {
         // open pop up window with vendorPublic and this window's location in URL
-        window.open(config.homeORKUrl + `?vendorPublic=${encodeURIComponent(config.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.href)}&vendorUrlSig=${encodeURIComponent(config.vendorUrlSignature)}&vendorOrks=0`, 'popup', 'width=800,height=800');
+        window.open(currentOrkURL + `?vendorPublic=${encodeURIComponent(config.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.href)}&vendorUrlSig=${encodeURIComponent(config.vendorUrlSignature)}&vendorOrks=0`, 'popup', 'width=800,height=800');
     }
     button.addEventListener('click', redirectToOrk);
     document.body.appendChild(button); // add button to page
     window.addEventListener("message", (event) => {
+        let result = processEvent(event);
+        if(result.status == "OK"){
+            currentOrkURL = result.data;
+            redirectToOrk();
+        }else{
+            return;
+        }
+    }, false);
+    return button;
+}
+
+/**
+ * 
+ * @param {MessageEvent} event 
+ */
+function processEvent(event){
         if (event.origin !== config.homeORKUrl) {
             // Something's not right... The message has come from an unknown domain... 
-            return;
+            return {status: "NOT OK", data: "WRONG WINDOW SENT MESSAGE"};
         }
 
         const info = event.data; // this will contain the jwt signed by the orks from a successful sign in 
 
+        if(info.charAt(0) == "*") return {status: "OK", data: info.substring(1, info.length)} // returns OK and newORKURL
+
         // Check the JWT is valid
-        const decoded = info.split(".")
+        const decoded = info.substring(1, info.length).split(".")
             .map(a => a.replace(/-/g, '+').replace(/_/g, '/') + "==".slice(0, (3 - a.length % 4) % 3));
 
         const header = atob(decoded[0]) // header 
@@ -66,6 +85,4 @@ export function AddTideButton(config){
         
         // redirect to vendor Auth Url  with jwt
         window.location.replace(window.location.origin + `/tide/auth?auth_token=${info}`); // redirect user to this vendor's authentication endpoint with auth token
-    }, false);
-    return button;
 }
