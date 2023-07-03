@@ -56,7 +56,7 @@ export function AddTideButton(config){
  * @param {MessageEvent} event 
  */
 function processEvent(event){
-        if (event.origin !== config.homeORKUrl) {
+        if (event.origin !== currentOrkURL) {
             // Something's not right... The message has come from an unknown domain... 
             return {status: "NOT OK", data: "WRONG WINDOW SENT MESSAGE"};
         }
