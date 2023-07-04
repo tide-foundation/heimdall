@@ -43,7 +43,6 @@ export function AddTideButton(config){
         let result = processEvent(event);
         if(result.status == "OK"){
             currentOrkURL = result.data;
-            window.open(result.data + `?vendorPublic=${encodeURIComponent(config.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.href)}&vendorUrlSig=${encodeURIComponent(config.vendorUrlSignature)}&vendorOrks=0`, 'popup', 'width=800,height=800');
         }else{
             return;
         }
