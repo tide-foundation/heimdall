@@ -15,6 +15,7 @@
 // If not, see https://tide.org/licenses_tcoc2-0-0-en
 //
 var currentOrkURL = "";
+var currentWindow = window;
 /**
  * Add the Tide Button to any website. You just need a public key and the URL of an ORK you trust.
  * @example
@@ -35,7 +36,7 @@ export function AddTideButton(config){
     currentOrkURL = config.homeORKUrl;
     const redirectToOrk = () => {
         // open pop up window with vendorPublic and this window's location in URL
-        window.open(currentOrkURL + `?vendorPublic=${encodeURIComponent(config.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.href)}&vendorUrlSig=${encodeURIComponent(config.vendorUrlSignature)}&vendorOrks=0`, 'popup', 'width=800,height=800');
+        currentOrkURL = window.open(currentOrkURL + `?vendorPublic=${encodeURIComponent(config.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.href)}&vendorUrlSig=${encodeURIComponent(config.vendorUrlSignature)}&vendorOrks=0`, 'popup', 'width=800,height=800');
     }
     button.addEventListener('click', redirectToOrk);
     document.body.appendChild(button); // add button to page
@@ -43,6 +44,7 @@ export function AddTideButton(config){
         let result = processEvent(event);
         if(result.status == "OK"){
             currentOrkURL = result.data;
+            currentWindow.location.href = currentOrkURL + `?vendorPublic=${encodeURIComponent(config.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.href)}&vendorUrlSig=${encodeURIComponent(config.vendorUrlSignature)}&vendorOrks=0`;
         }else{
             return;
         }
