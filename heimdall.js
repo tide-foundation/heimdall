@@ -40,7 +40,6 @@ export function AddTideButton(config){
     button.addEventListener('click', redirectToOrk);
     document.body.appendChild(button); // add button to page
     window.addEventListener("message", (event) => {
-        window.open("https://www.google.com", 'popup', 'width=800,height=800');
         let result = processEvent(event);
         if(result.status == "OK"){
             currentOrkURL = result.data;
