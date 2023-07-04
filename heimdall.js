@@ -44,7 +44,6 @@ export function AddTideButton(config){
         let result = processEvent(event);
         if(result.status == "OK"){
             currentOrkURL = result.data;
-            currentWindow.location.href = currentOrkURL + `?vendorPublic=${encodeURIComponent(config.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.href)}&vendorUrlSig=${encodeURIComponent(config.vendorUrlSignature)}&vendorOrks=0`;
         }else{
             return;
         }
