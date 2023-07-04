@@ -66,7 +66,7 @@ function processEvent(event){
         if(info.charAt(0) == "*") return {status: "OK", data: info.substring(1, info.length)} // returns OK and newORKURL
 
         // Check the JWT is valid
-        const decoded = info.substring(1, info.length).split(".")
+        const decoded = info.split(".")
             .map(a => a.replace(/-/g, '+').replace(/_/g, '/') + "==".slice(0, (3 - a.length % 4) % 3));
 
         const header = atob(decoded[0]) // header 
