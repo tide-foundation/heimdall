@@ -5,13 +5,21 @@
         <p>Vendor HTML page</p>
 
     <script type="module">
-        import { AddTideButton } from './heimdall.js';
+        import Heimdall from './heimdall.js';
         const config = {
-            vendorPublic: "bGKZOFa1LUJzgHY1HOVNQdO9iFTuBkB6EvpJiYqSDBs=",
-            vendorUrlSignature: "oeTGxVDYPCY3fKZ+X8HhIh2fPbnJI5c9x4K4Ug0xJQaCXZK60BRZGc2xSsRtqIdZIpwhdWk5AOtdjJeCZbr1Dg==",
-            homeORKUrl: "http://localhost:1002"
+            vendorPublic: "Y108e3ZMMwisaSSmEvb7vKW3XgynnYvN6vZCf4gMJ+Q=",
+            vendorUrlSignature: "Ey0qaWB9fgMZ46Uj6tB8y3QnKatI9euuJ29QV5IsjpwKowQPBgIap6PaT7p8Zw5Ce2GozS5n7rBV4KFQnZ9rBA==",
+            homeORKUrl: "http://localhost:1002",
+            mode: "openssh",
         }
-        const button = AddTideButton(config);
+
+        const modelToSign = "AAAAIMAQBthuuhaUTnQIYHxHv6glMZtyxsAZMYEb83cbbAkgMgAAAAR1c2VyAAAADnNzaC1jb25uZWN0aW9uAAAACXB1YmxpY2tleQEAAAALc3NoLWVkMjU1MTkAAAAzAAAAC3NzaC1lZDI1NTE5AAAAIJ67ux4/TCLHWNCA1+TxiW7rOaLAxbtyDKK4Sscu4aFB"
+
+        const heim = new Heimdall(config);
+        await heim.OpenEnclave();
+        // enclave stays open - dev can modify model to sign here
+        const resp = await heim.CompleteSignIn(modelToSign);
+        console.log(resp);
 
     </script>  
     <script>

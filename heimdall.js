@@ -38,7 +38,7 @@ export default class Heimdall{
         this.homeORKUrl = config.homeORKUrl;
 
         this.mode = Object.hasOwn(config, 'mode') ? config.mode : "default";
-        this.modelToSign = Object.hasOwn(config, 'modelToSign') ? "" : config.modelToSign;
+        this.modelToSign = Object.hasOwn(config, 'modelToSign') ? config.modelToSign : "";
 
         this.currentOrkURL = this.homeORKUrl;
         this.enclaveWindow = undefined;
@@ -67,7 +67,7 @@ export default class Heimdall{
 
     // Get's user details (Pub, VUID) / returns pub, vuid
     async OpenEnclave(){
-        if(this.mode == "default" && this.modelToSign != "") throw Error("Default mode cannot take a model to sign.")
+        if((this.mode == "default" && this.modelToSign != "")) throw Error("Default mode cannot take a model to sign.")
         this.redirectToOrk();
         return await this.waitForSignal(); // will return pubKey and UID  OR  signature depending on whether a model To Sign was supplied
     }
@@ -76,8 +76,9 @@ export default class Heimdall{
     async CompleteSignIn(modelToSign){
         // you'll need to post message here to the enclave containing the model to sign
         if(typeof(modelToSign) !== "string") throw Error("Model to sign must be a string");
+        const pre_resp = this.waitForSignal();
         this.enclaveWindow.postMessage(modelToSign, this.currentOrkURL); // check this works
-        const resp = await this.waitForSignal();
+        const resp = await pre_resp;
         if(resp.responseType !== "completed") throw Error("Unexpected response from enclave");
         return resp;
     }
@@ -89,8 +90,8 @@ export default class Heimdall{
     waitForSignal() {
         return new Promise((resolve) => {
             const handler = (event) => {
-                window.removeEventListener("message", handler);
-                resolve(this.processEvent(event, this.mode));
+                //window.removeEventListener("message", handler);
+                resolve(this.processEvent(event));
             };
             window.addEventListener("message", handler, false);
         });
@@ -102,14 +103,14 @@ export default class Heimdall{
  * @param {string} mode
  */
     processEvent(event){
-        if (event.origin !== currentOrkURL) {
+        if (event.origin !== this.currentOrkURL) {
             // Something's not right... The message has come from an unknown domain... 
             return {status: "NOT OK", data: "WRONG WINDOW SENT MESSAGE"};
         }
 
         const enclaveResponse = event.data; // this will contain the jwt signed by the orks from a successful sign in 
 
-        if(enclaveResponse.ok != true) throw Error("Tide Enclave had an error");
+        if(enclaveResponse.ok != true) throw Error("Tide Enclave had an error: " + enclaveResponse.message);
 
         switch (enclaveResponse.dataType) {
             case "userData":
@@ -128,6 +129,7 @@ export default class Heimdall{
             case "newORKUrl":
                 this.currentOrkURL = enclaveResponse.url;
                 this.redirectToOrk();
+                break;
             default:
                 throw Error("Unknown data type returned from enclave");
         }
@@ -154,4 +156,5 @@ function jwtValid(jwt){
     }catch{
         return false;
     }
+    return true;
 }
