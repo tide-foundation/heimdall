@@ -84,7 +84,7 @@ export default class Heimdall{
     }
 
     redirectToOrk(){
-        this.enclaveWindow = window.open(this.currentOrkURL + `?vendorPublic=${encodeURIComponent(this.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.href)}&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}&mode=${encodeURIComponent(this.mode)}&modelToSign=${encodeURIComponent(this.modelToSign)}&vendorOrks=0`, 'popup', 'width=800,height=800');
+        this.enclaveWindow = window.open(this.currentOrkURL + `?vendorPublic=${encodeURIComponent(this.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.origin)}&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}&mode=${encodeURIComponent(this.mode)}&modelToSign=${encodeURIComponent(this.modelToSign)}&vendorOrks=0`, 'popup', 'width=800,height=800');
     }
 
     waitForSignal() {
