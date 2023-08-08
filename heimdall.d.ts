@@ -7,7 +7,8 @@ export default class Heimdall{
     } | {
         responseType: string,
         PublicKey: string,
-        UID: string
+        UID: string,
+        NewAccount: boolean
     }>
     CompleteSignIn(modelToSign: string): Promise<{
         responseType: string,

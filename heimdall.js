@@ -117,14 +117,16 @@ export default class Heimdall{
                 return {
                     responseType: "userData",
                     PublicKey: enclaveResponse.publicKey,
-                    UID: enclaveResponse.uid
+                    UID: enclaveResponse.uid,
+                    NewAccount: enclaveResponse.newAccount
                 }
             case "completed":
                 if(!jwtValid(enclaveResponse.TideJWT)) throw Error("TideJWT not valid")
                 return {
                     responseType: "completed",
                     ModelSig: enclaveResponse.modelSig,
-                    TideJWT: enclaveResponse.TideJWT
+                    TideJWT: enclaveResponse.TideJWT,
+                    NewAccount: enclaveResponse.newAccount
                 }
             case "newORKUrl":
                 this.currentOrkURL = enclaveResponse.url;
