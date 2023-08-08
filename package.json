@@ -1,6 +1,6 @@
 {
   "name": "heimdall-tide",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Allows for Integration with Tide",
   "main": "heimdall.js",
   "scripts": {
