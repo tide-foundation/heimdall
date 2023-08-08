@@ -125,8 +125,7 @@ export default class Heimdall{
                 return {
                     responseType: "completed",
                     ModelSig: enclaveResponse.modelSig,
-                    TideJWT: enclaveResponse.TideJWT,
-                    NewAccount: enclaveResponse.newAccount
+                    TideJWT: enclaveResponse.TideJWT
                 }
             case "newORKUrl":
                 this.currentOrkURL = enclaveResponse.url;
