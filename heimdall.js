@@ -73,9 +73,9 @@ export default class Heimdall{
     }
 
     // Signs the requested model / returns TideJWT + sig
-    async CompleteSignIn(modelToSign=null){
+    async CompleteSignIn(modelToSign=undefined){
         // you'll need to post message here to the enclave containing the model to sign
-        if(!(typeof(modelToSign) === "string" || typeof(modelToSign) === "null")) throw Error("Model to sign must be a string or null");
+        if(!(typeof(modelToSign) === "string" || typeof(modelToSign) === "undefined")) throw Error("Model to sign must be a string or null");
         const pre_resp = this.waitForSignal();
         this.enclaveWindow.postMessage(modelToSign, this.currentOrkURL); // check this works
         const resp = await pre_resp;
