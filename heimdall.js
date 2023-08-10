@@ -90,7 +90,7 @@ export default class Heimdall{
     waitForSignal() {
         return new Promise((resolve) => {
             const handler = (event) => {
-                //window.removeEventListener("message", handler);
+                window.removeEventListener("message", handler);
                 resolve(this.processEvent(event));
             };
             window.addEventListener("message", handler, false);
