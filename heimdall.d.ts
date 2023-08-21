@@ -15,4 +15,5 @@ export default class Heimdall{
         ModelSig: string,
         TideJWT: string
     }>
+    CloseEnclave(): void
 }
