@@ -69,14 +69,16 @@ export default class Heimdall{
     async OpenEnclave(){
         if((this.mode == "default" && this.modelToSign != "")) throw Error("Default mode cannot take a model to sign.")
         this.redirectToOrk();
-        return await this.waitForSignal(); // will return pubKey and UID  OR  signature depending on whether a model To Sign was supplied
+        if(this.modelToSign === "" || this.mode != "default") return await this.waitForSignal("userData");
+        else if(this.modelToSign !== "" || this.mode === "default") return await this.waitForSignal("completed");
+        else throw Error("Unexpected turn of events");
     }
 
     // Signs the requested model / returns TideJWT + sig
     async CompleteSignIn(modelToSign=null){
         // you'll need to post message here to the enclave containing the model to sign
         if(!(typeof(modelToSign) === "string" || modelToSign == null)) throw Error("Model to sign must be a string or null");
-        const pre_resp = this.waitForSignal();
+        const pre_resp = this.waitForSignal("completed");
         this.enclaveWindow.postMessage(modelToSign, this.currentOrkURL);
         const resp = await pre_resp;
         if(resp.responseType !== "completed") throw Error("Unexpected response from enclave");
@@ -92,11 +94,15 @@ export default class Heimdall{
         this.enclaveWindow = window.open(this.currentOrkURL + `?vendorPublic=${encodeURIComponent(this.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.origin)}&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}&mode=${encodeURIComponent(this.mode)}&modelToSign=${encodeURIComponent(this.modelToSign)}&vendorOrks=0`, 'popup', 'width=800,height=800');
     }
 
-    waitForSignal() {
+    waitForSignal(responseTypeToAwait) {
         return new Promise((resolve) => {
             const handler = (event) => {
-                window.removeEventListener("message", handler);
-                resolve(this.processEvent(event));
+                const response = this.processEvent(event);
+                if(response.responseType === responseTypeToAwait){
+                    window.removeEventListener("message", handler);
+                    resolve(response);
+                }
+                
             };
             window.addEventListener("message", handler, false);
         });
@@ -135,7 +141,9 @@ export default class Heimdall{
             case "newORKUrl":
                 this.currentOrkURL = enclaveResponse.url;
                 this.redirectToOrk();
-                break;
+                return {
+                    responseType: "newORKUrl"
+                }
             default:
                 throw Error("Unknown data type returned from enclave");
         }
