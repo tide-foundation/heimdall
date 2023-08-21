@@ -77,10 +77,15 @@ export default class Heimdall{
         // you'll need to post message here to the enclave containing the model to sign
         if(!(typeof(modelToSign) === "string" || modelToSign == null)) throw Error("Model to sign must be a string or null");
         const pre_resp = this.waitForSignal();
-        this.enclaveWindow.postMessage(modelToSign, this.currentOrkURL); // check this works
+        this.enclaveWindow.postMessage(modelToSign, this.currentOrkURL);
         const resp = await pre_resp;
         if(resp.responseType !== "completed") throw Error("Unexpected response from enclave");
         return resp;
+    }
+
+    // In case of vendor side error, we can close enclave
+    CloseEnclave(){
+        this.enclaveWindow.postMessage("VENDOR ERROR: Close Tide Enlcave", this.currentOrkURL);
     }
 
     redirectToOrk(){
