@@ -29,7 +29,8 @@ const config = {
 
 3. Add the Tide Button to your page:
 ```javascript
-const button = Heimdall.AddTideButton(config);
+const heimdall = new Heimdall(config);
+const button = heimdall.AddTideButton();
 ```
 
 You can then modify the button's style positioning and other stuff by interacting with the button object, which represents the Tide Button.
