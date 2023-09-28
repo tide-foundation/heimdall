@@ -23,8 +23,7 @@ export default class Heimdall{
     * vendorPublic: string //Make sure to create some public key for this
     * vendorUrlSignature: string //The value of this web page's URL (such as https://www.yoursite.com/login) signed (EdDSA) with this vendor's VVK.
     * homeORKUrl: string //Just the origin. For example => https://someOrk.com
-    * mode: string (Optional) // An identifier of what kind of model 'modelToSign' is. "Default" mode indiciates there is no model to sign.
-    * modelToSign: string (Optional) // The model you want to sign in the Tide flow. Available models: ["openssh"]
+    * enclaveRequest: object // Contains the neccessary information on what how the enclave should behave and the information it returns
     * }
     * @param {object} config
      */
@@ -32,13 +31,17 @@ export default class Heimdall{
         if (!Object.hasOwn(config, 'vendorPublic')) { throw Error("No vendor public key has been included in config") }
         if (!Object.hasOwn(config, 'vendorUrlSignature')) { throw Error("No vendor url sig has been included in config") }
         if (!Object.hasOwn(config, 'homeORKUrl')) { throw Error("No home ork URL has been included in config") }
+        if (!Object.hasOwn(config, 'enclaveRequest')) { throw Error("No enclave request has been included in config") }
+
 
         this.vendorPublic = config.vendorPublic;
         this.vendorUrlSignature = config.vendorUrlSignature;
         this.homeORKUrl = config.homeORKUrl;
-
-        this.mode = Object.hasOwn(config, 'mode') ? config.mode : "default";
-        this.modelToSign = Object.hasOwn(config, 'modelToSign') ? config.modelToSign : "";
+        this.enclaveRequest = config.enclaveRequest;
+        // check enclave request for invalid values
+        if(this.enclaveRequest.refreshToken == false && this.enclaveRequest.customModel == undefined && this.enclaveRequest.getUserInfoFirst == false){
+            throw Error("It seems you are trying to log a user into Tide and expect nothing in return. Make sure you at least use the sign in process for something.")
+        }
 
         this.currentOrkURL = this.homeORKUrl;
         this.enclaveWindow = undefined;
@@ -67,19 +70,18 @@ export default class Heimdall{
 
     // Get's user details (Pub, VUID) / returns pub, vuid
     async OpenEnclave(){
-        if((this.mode == "default" && this.modelToSign != "")) throw Error("Default mode cannot take a model to sign.")
         this.redirectToOrk();
-        if(this.modelToSign === "" || this.mode != "default") return await this.waitForSignal("userData");
-        else if(this.modelToSign !== "" || this.mode === "default") return await this.waitForSignal("completed");
-        else throw Error("Unexpected turn of events");
+        if(this.enclaveRequest.getUserInfoFirst == true) return await this.waitForSignal("userData");
+        else if(this.enclaveRequest.getUserInfoFirst == false) return await this.waitForSignal("completed");
+        else throw Error("Did you define getUserInfoFirst in enclave request?");
     }
 
     // Signs the requested model / returns TideJWT + sig
-    async CompleteSignIn(modelToSign=null){
+    async CompleteSignIn(customModel=null){
         // you'll need to post message here to the enclave containing the model to sign
-        if(!(typeof(modelToSign) === "string" || modelToSign == null)) throw Error("Model to sign must be a string or null");
+        if(!(typeof(model) === "object" || customModel == null)) throw Error("Model to sign must be a object or null");
         const pre_resp = this.waitForSignal("completed");
-        this.enclaveWindow.postMessage(modelToSign, this.currentOrkURL);
+        this.enclaveWindow.postMessage(customModel, this.currentOrkURL);
         const resp = await pre_resp;
         if(resp.responseType !== "completed") throw Error("Unexpected response from enclave");
         return resp;
@@ -91,7 +93,7 @@ export default class Heimdall{
     }
 
     redirectToOrk(){
-        this.enclaveWindow = window.open(this.currentOrkURL + `?vendorPublic=${encodeURIComponent(this.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.origin)}&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}&mode=${encodeURIComponent(this.mode)}&modelToSign=${encodeURIComponent(this.modelToSign)}&vendorOrks=0`, new Date().getTime(), 'width=800,height=800');
+        this.enclaveWindow = window.open(this.currentOrkURL + `?vendorPublic=${encodeURIComponent(this.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.origin)}&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}&enclaveRequest=${encodeURIComponent(JSON.stringify(this.enclaveRequest))}&vendorOrks=0`, new Date().getTime(), 'width=800,height=800');
     }
 
     waitForSignal(responseTypeToAwait) {
