@@ -77,7 +77,7 @@ export default class Heimdall{
     }
 
     // Signs the requested model / returns TideJWT + sig
-    async CompleteSignIn(customModel={Name: "None"}){
+    async CompleteSignIn(customModel={Name: "RefreshToken"}){
         // you'll need to post message here to the enclave containing the model to sign
         if(!(typeof(customModel) === "object" || customModel == null)) throw Error("Custom model must be a object or null");
         const pre_resp = this.waitForSignal("completed");
