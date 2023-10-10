@@ -80,6 +80,7 @@ export default class Heimdall{
     async CompleteSignIn(customModel={Name: "RefreshToken"}){
         // you'll need to post message here to the enclave containing the model to sign
         if(!(typeof(customModel) === "object" || customModel == null)) throw Error("Custom model must be a object or null");
+        this.enclaveRequest.customModel = customModel;
         const pre_resp = this.waitForSignal("completed");
         this.enclaveWindow.postMessage(customModel, this.currentOrkURL);
         const resp = await pre_resp;
@@ -134,7 +135,9 @@ export default class Heimdall{
                     NewAccount: enclaveResponse.newAccount
                 }
             case "completed":
-                if(!jwtValid(enclaveResponse.TideJWT)) throw Error("TideJWT not valid")
+                if(this.enclaveRequest.customModel.Name.includes("RefreshToken")){
+                    if(!jwtValid(enclaveResponse.TideJWT)) throw Error("TideJWT not valid")
+                }
                 return {
                     responseType: "completed",
                     ModelSig: enclaveResponse.modelSig,
