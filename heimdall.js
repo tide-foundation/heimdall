@@ -32,6 +32,7 @@ export default class Heimdall{
         if (!Object.hasOwn(config, 'vendorUrlSignature')) { throw Error("No vendor url sig has been included in config") }
         if (!Object.hasOwn(config, 'homeORKUrl')) { throw Error("No home ork URL has been included in config") }
         if (!Object.hasOwn(config, 'enclaveRequest')) { throw Error("No enclave request has been included in config") }
+        if(typeof(this.enclaveRequest.getUserInfoFirst) !== "boolean") throw Error("Make sure to set enclaveRequest.getUserInfoFirst to true or false")
 
 
         this.vendorPublic = config.vendorPublic;
@@ -47,33 +48,39 @@ export default class Heimdall{
         this.enclaveWindow = undefined;
     }
 
-    // Vendor flow / returns button
-    AddEnclaveButton(){
+    // Ideally pass PerformTideAuth(callback) as listener into this func
+    AddEnclaveButton(listener){
         const button = document.createElement('button');
         button.textContent = "Tide Button";
-        button.addEventListener('click', this.redirectToOrk); // no need to pass params for this redirectToOrk call
+        button.addEventListener('click', listener); // no need to pass params for this redirectToOrk call
         document.body.appendChild(button); // add button to page
-
-        window.addEventListener("message", (event) => {
-            let result = processEvent(event); // remember 'processEvent' will return new ork url OR just switch page to vendor's page (default mode)
-            if(result.responseType == "completed"){
-                // redirect to vendor Auth Url  with jwt
-                window.location.replace(window.location.origin + `/tide/auth?auth_token=${result.TideJWT}`); // redirect user to this vendor's authentication endpoint with auth token
-            }
-            else{
-                // TODO: Handle 2 stage AddEnclaveButton flow (model to sign not prepped b4hand)
-                throw Error("Unhandled error")
-            }
-        }, false);
         return button;
     }
 
-    // Get's user details (Pub, VUID) / returns pub, vuid
-    async OpenEnclave(){
-        this.redirectToOrk();
+    // callback must be defined (it must return customModel if you are expecting a 2 stage process)
+    async PerformTideAuth(callback){
+        if(typeof(this.enclaveRequest.vendorReturnAuthUrl) !== "string") throw Error("Vendor's Return Auth URL has not been defined in config.enclaveRequest")
+        const userInfo = await this.OpenEnclave();
+        let jwt = undefined;
+        if(userInfo.responseType == "completed"){
+            jwt = userInfo.TideJWT;
+        }else if(userInfo.responseType == "userData"){
+            let customModel = callback(userInfo); // this can be used for the vendor page to perform operations and develop a model to sign
+            jwt = await this.CompleteSignIn(customModel).TideJWT; // customModel must be defined - the user requested it for god's sake! If they didn't want to define it they could've just put getUserInfoFirst == false in config
+        }
+        if(typeof(jwt) !== "string") throw Error("PerformTideAuth function requires a RefreshToken (TideJWT) to be requested in the config");
+        window.location.replace(this.enclaveRequest.vendorReturnAuthUrl + jwt); // redirect user to this vendor's authentication endpoint with auth token
+    }
+
+    async RetrieveUserInfo(){
         if(this.enclaveRequest.getUserInfoFirst == true) return await this.waitForSignal("userData");
         else if(this.enclaveRequest.getUserInfoFirst == false) return await this.waitForSignal("completed");
         else throw Error("Did you define getUserInfoFirst in enclave request?");
+    }
+
+    async OpenEnclave(){
+        this.redirectToOrk();
+        return await this.RetrieveUserInfo();
     }
 
     // Signs the requested model / returns TideJWT + sig
@@ -84,7 +91,6 @@ export default class Heimdall{
         const pre_resp = this.waitForSignal("completed");
         this.enclaveWindow.postMessage(customModel, this.currentOrkURL);
         const resp = await pre_resp;
-        if(resp.responseType !== "completed") throw Error("Unexpected response from enclave");
         return resp;
     }
 

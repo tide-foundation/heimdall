@@ -14,6 +14,15 @@ You'll have to first create a secret key and sign the URL where you implement yo
 Keep in mind you don't need to store your site's private key for now, just the public key which is shown in the console.
 
 ## Implementation
+### Tide Button (Simple Vendor Auth Flow)
+```javascript
+var heimdall = new Heimdall(config);
+var button = heimdall.AddTideButton(heimdall.PerformTideAuth((userInfo) => {
+  // create your data to sign
+  var customModel = {Name: "OpenSSH", Data:"something i want to sign"}
+  return customModel;
+}))
+```
 1. Import Heimdall into your JS:
 ```javascript
 import Heimdall from "https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js";
