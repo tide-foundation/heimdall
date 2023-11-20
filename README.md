@@ -1,42 +1,63 @@
-# Heimdall
+# Heimdall JavaScript SDK
 
-## What is Heimdall?
-Heimdall is a JS SDK built to allow developers to secure user secrets without holding any keys. Heimdall (yes, the one from Norse mythology) creates a bridge between a vendor's client application and the user's identity (username + password). The only thing that crosses this bridge is the user's CVK, which is securely retrieved from Tide's decentralized network of authentication nodes. The vendor can now secure user data from the client side, without ever needing:
-1. The user's username or password for authentication
-2. A private key stored on their side to encrypt the user's data
-3. To have access to the user's plain text data (all encryption can be done client side)
+## This repo is part of the FIRST PHASE code. All repos that have this message interact and use one another in some way.
 
-We acknowledge that some aspects of this can be insure, such as the vendor having access to the same DOM as the user, although these issues will be smoothed out in later releases, where we will begin to introduce signature and decryption services done by the Tide network on a secure enclave.
+## What is the Heimdall JS SDK?
+This Javascript SDK was built to enable developers to use Tide's authentication flows in their own apps.
 
-## Example
-A very very basic web page that integrates the Tide Enclave with the vendor's front end can be found in example.html. Notice how tide.js is being sourced at the top of the html page.
+## Why should you use the Heimdall JS SDK?
+The Heimdall SDK is a tool that allows a website developer to interact and take advantage of the Tide Network's many capabilities. This includes providing unparalleled security for private key management, authentication, and user account recovery.
 
-## Usage
-Add this line to the top of your html page
+## Vendor Key Generation
+You'll have to first create a secret key and sign the URL where you implement your Tide Button with EdDSA, luckily I created a JSFiddle so you don't have to do it yourself. Go to [this fiddle](https://jsfiddle.net/NotMyDog/vos0eLbq/1/) and change the ```yourYourSiteURL``` value to the URL where you will host the Tide Button (your login page). Click the "RUN" button on the top left and you'll see two values pop up in the console. Keep these for later.
 
-```<script type="module" src="https://tide-foundation.github.io/heimdall/tide.js"></script>```
+Keep in mind you don't need to store your site's private key for now, just the public key which is shown in the console.
 
-Inside another set of ```<script>``` tags, add a function called ```heimdall()``` like this:
+## Implementation
+### Tide Button (Simple Vendor Auth Flow)
+```javascript
+var heimdall = new Heimdall(config);
+var button = heimdall.AddTideButton(heimdall.PerformTideAuth((userInfo) => {
+  // create your data to sign
+  var customModel = {Name: "OpenSSH", Data:"something i want to sign"}
+  return customModel;
+}))
 ```
-<script>
-        function heimdall(obj){ // i get called from inside tide.js
-            // do stuff with cvk
-            localStorage.setItem("CVK", obj.CVK);
-            localStorage.setItem("UID", obj.UID);
+1. Import Heimdall into your JS:
+```javascript
+import Heimdall from "https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/heimdall.js";
+```
+2. Create the config object:
+```javascript
+const config = {
+  vendorPublic: {VALUE FROM THE CONSOLE},
+  vendorUrlSignature: {VALUE FROM THE CONSOLE},
+  homeORKUrl: "https://prod-ork1.azurewebsites.net"
+    }
+```
 
-            window.location.replace(window.location.href + "main.html"); // redirect to main page
-        }
-    </script>
+3. Add the Tide Button to your page:
+```javascript
+const heimdall = new Heimdall(config);
+const button = heimdall.AddTideButton();
 ```
-The above function ```heimdall``` will be called by either the sign in/up Tide functions, with an object cosisiting of:
-```
-{
-  CVK: BigInt <- The actual CVK of the user, don't steal it from their browser!
-  UID: string <- UID of the user for Id purposes
+
+You can then modify the button's style positioning and other stuff by interacting with the button object, which represents the Tide Button.
+
+## Example implementation
+```javascript
+const config = {
+  vendorPublic: "bGKZOFa1LUJzgHY1HOVNQdO9iFTuBkB6EvpJiYqSDBs=",
+  vendorUrlSignature: "Fi/fvZmmwsK2IJfXC9y2Oh0UIabnSBJlS5XYlsSYAxf9OEOK543D6nM5b5Xs2h2GFl93AzJ7yrU1u7fzk4/EDQ==",
+  homeORKUrl: "http://localhost:1002"
 }
+
+const button = Heimdall.AddTideButton(config);
+button.className = "vendor-form-btn";
+button.innerHTML = "LOGIN";
+let btnDiv = document.getElementById("tide-btn-div");
+btnDiv.appendChild(button);
+
 ```
 
-That's it! This SDK is great for Single Page Apps which want to encrypt user secrets with a key THEY DON'T HOLD. Instead, the Tide Enclave handles retrieving the key from the Tide Network, which it then passes to the heimdall function YOU implement. You can then choose what to do with the user's CVK or UID.
-
-## Integration with PlatyPus Passwords
-PlatyPus Passwords [link](https://github.com/sundayScoop/PlatyPasswords) is a PoC decentralized password manager that uses a user's CVK to encrypt their passwords. This means that even if PlatyPus Password's servers are completely compromised by adverseries, all user data is secure with 128 bit entropy from the CVK, unlike other password managers that use the hash of a master password to encrypt all other passwords.
+## For the full example, see [sample-vendor](https://github.com/tide-foundation/sample-vendor/tree/main)

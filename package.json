@@ -1,0 +1,23 @@
+{
+  "name": "heimdall-tide",
+  "version": "0.0.35-alpha",
+  "description": "Allows for Integration with Tide",
+  "main": "heimdall.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tide-foundation/heimdall.git"
+  },
+  "keywords": [
+    "tide"
+  ],
+  "author": "Julio Medeiros",
+  "license": "ISC",
+  "types": "./heimdall.d.ts",
+  "bugs": {
+    "url": "https://github.com/tide-foundation/heimdall/issues"
+  },
+  "homepage": "https://github.com/tide-foundation/heimdall#readme"
+}
