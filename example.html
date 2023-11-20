@@ -5,21 +5,28 @@
         <p>Vendor HTML page</p>
 
     <script type="module">
-        import Heimdall from './heimdall.js';
+        import {Heimdall, TidePromise} from './heimdall.js';
         const config = {
-            vendorPublic: "Y108e3ZMMwisaSSmEvb7vKW3XgynnYvN6vZCf4gMJ+Q=",
-            vendorUrlSignature: "Ey0qaWB9fgMZ46Uj6tB8y3QnKatI9euuJ29QV5IsjpwKowQPBgIap6PaT7p8Zw5Ce2GozS5n7rBV4KFQnZ9rBA==",
-            homeORKUrl: "http://localhost:1002",
-            mode: "openssh",
+            vendorPublic: "+g/dDdxLqJMOLpJMZ3WIiJ1PEe/12bNhDoIBFmAvgR8=",
+            vendorUrlSignature: "0dYi2k4V8Qa5BfKkNSkqcCGQ4d1BIJm6+A5Pwl8DNbZcxQljPnbNk0KG5FTkWjDTbckKHSG7xi1xuzb38uy3Bg==",
+            homeORKUrl: "http://localhost:1001",
+            enclaveRequest: {
+                getUserInfoFirst: false, // I don't want a 2 stage sign in (i either want the public key first, or want to provide a signature halfway)
+                refreshToken: true, // I want a TideJWT returned
+                customModel: undefined // I do not want to provide a customModel
+            }
         }
 
-        const modelToSign = "AAAAIMAQBthuuhaUTnQIYHxHv6glMZtyxsAZMYEb83cbbAkgMgAAAAR1c2VyAAAADnNzaC1jb25uZWN0aW9uAAAACXB1YmxpY2tleQEAAAALc3NoLWVkMjU1MTkAAAAzAAAAC3NzaC1lZDI1NTE5AAAAIJ67ux4/TCLHWNCA1+TxiW7rOaLAxbtyDKK4Sscu4aFB"
-
-        const heim = new Heimdall(config);
-        await heim.OpenEnclave();
-        // enclave stays open - dev can modify model to sign here
-        const resp = await heim.CompleteSignIn(modelToSign);
-        console.log(resp);
+        const heimdall = new Heimdall(config);
+        const vendorAction = null; // no need for vendor action as getUserInfoFirst was set to false
+        const tideResolveObj = new TidePromise();
+        const tideButtonAction = async (tideResolveObj) => {
+            return heimdall.GetCompleted(tideResolveObj); // I want *1 => completed sign in data (no 2 step process), as per the enclaveRequest, a TideJWT will arrive + NO modelSig
+        }
+        const tideButton = heimdall.AddTideButton(tideButtonAction, tideResolveObj); // i can modify tide button as i please
+        
+        const resolvedData = await tideResolveObj.promise; // hopefully this works
+        console.log(resolvedData.TideJWT) // the JWT
 
     </script>  
     <script>
