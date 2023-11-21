@@ -1,5 +1,18 @@
 export class Heimdall{
     constructor(config: object);
+    AddTideButton(tideButtonAction: function, actionParameter: any): HTMLButtonElement
+    PerformTideAuth(callback: function): void
+    GetUserInfo(promise: TidePromise): Promise<{
+        responseType: string,
+        PublicKey: string,
+        UID: string,
+        NewAccount: boolean
+    }>
+    GetCompleted(promise: TidePromise): Promise<{
+        responseType: string,
+        ModelSig: string,
+        TideJWT: string
+    }>
     OpenEnclave(): Promise<{
         responseType: string,
         ModelSig: string,
@@ -10,7 +23,7 @@ export class Heimdall{
         UID: string,
         NewAccount: boolean
     }>
-    CompleteSignIn(modelToSign: object = null): Promise<{
+    CompleteSignIn(customModel: object = null): Promise<{
         responseType: string,
         ModelSig: string,
         TideJWT: string
