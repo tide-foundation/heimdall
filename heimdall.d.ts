@@ -10,7 +10,7 @@ export class Heimdall{
         UID: string,
         NewAccount: boolean
     }>
-    CompleteSignIn(modelToSign: string = null): Promise<{
+    CompleteSignIn(modelToSign: object = null): Promise<{
         responseType: string,
         ModelSig: string,
         TideJWT: string
