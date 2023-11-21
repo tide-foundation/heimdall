@@ -1,4 +1,4 @@
-export default class Heimdall{
+export class Heimdall{
     constructor(config: object);
     OpenEnclave(): Promise<{
         responseType: string,
@@ -16,4 +16,10 @@ export default class Heimdall{
         TideJWT: string
     }>
     CloseEnclave(): void
+}
+export class TidePromise{
+    constructor(callback: function);
+    callback: function;
+    promise: Promise;
+    fulfill(value: any): void
 }

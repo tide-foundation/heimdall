@@ -39,6 +39,7 @@ export class Heimdall{
         this.vendorUrlSignature = config.vendorUrlSignature;
         this.homeORKUrl = config.homeORKUrl;
         this.enclaveRequest = config.enclaveRequest;
+        this.vendorReturnAuthUrl = config.vendorReturnAuthUrl;
         // check enclave request for invalid values
         if(this.enclaveRequest.refreshToken == false && this.enclaveRequest.customModel == undefined && this.enclaveRequest.getUserInfoFirst == false){
             throw Error("It seems you are trying to log a user into Tide and expect nothing in return. Make sure you at least use the sign in process for something.")
@@ -61,7 +62,7 @@ export class Heimdall{
     // TIDE BUTTON ACTION
     // callback must be defined (it must return customModel if you are expecting a 2 stage process)
     async PerformTideAuth(callback){
-        if(typeof(this.enclaveRequest.vendorReturnAuthUrl) !== "string") throw Error("Vendor's Return Auth URL has not been defined in config.enclaveRequest")
+        if(typeof(this.vendorReturnAuthUrl) !== "string") throw Error("Vendor's Return Auth URL has not been defined in config.enclaveRequest")
         const userInfo = await this.OpenEnclave();
         let jwt = undefined;
         if(userInfo.responseType == "completed"){
@@ -71,7 +72,7 @@ export class Heimdall{
             jwt = await this.CompleteSignIn(customModel).TideJWT; // customModel must be defined - the user requested it for god's sake! If they didn't want to define it they could've just put getUserInfoFirst == false in config
         }
         if(typeof(jwt) !== "string") throw Error("PerformTideAuth function requires a RefreshToken (TideJWT) to be requested in the config");
-        window.location.replace(this.enclaveRequest.vendorReturnAuthUrl + jwt); // redirect user to this vendor's authentication endpoint with auth token
+        window.location.replace(this.vendorReturnAuthUrl + jwt); // redirect user to this vendor's authentication endpoint with auth token
     }
 
     // TIDE BUTTON ACTION
@@ -79,9 +80,12 @@ export class Heimdall{
      * @param {TidePromise} promise 
      */
     async GetUserInfo(promise){
+        if(this.enclaveRequest.getUserInfoFirst == false) throw Error("getUserInfofirst must be set to true to use heimdall.GetUserInfo()")
         this.redirectToOrk();
         const userData = await this.waitForSignal("userData");
         promise.fulfill(userData);
+        // continue sign in so vendor doesn't have to do it (i can't think of why vendor would abort this process, if something screws up, it's on the vendor, they already paid for the user)
+        await this.CompleteSignIn();
     }
 
     // TIDE BUTTON ACTION
@@ -90,7 +94,12 @@ export class Heimdall{
      */
     async GetCompleted(promise){
         this.redirectToOrk();
-        const completedData = await this.waitForSignal("completed");
+        let customModel = null;
+        if(this.enclaveRequest.getUserInfoFirst){
+            const userInfo = await this.waitForSignal("userData");
+            if(promise.callback != null) customModel = await promise.callback(userInfo); // putting await here in case implementor uses async
+        }
+        const completedData = await this.CompleteSignIn(customModel);
         promise.fulfill(completedData);
     }
 
@@ -106,7 +115,7 @@ export class Heimdall{
     }
 
     // Signs the requested model / returns TideJWT + sig
-    async CompleteSignIn(customModel={Name: "RefreshToken"}){
+    async CompleteSignIn(customModel=null){
         // you'll need to post message here to the enclave containing the model to sign
         if(!(typeof(customModel) === "object" || customModel == null)) throw Error("Custom model must be a object or null");
         this.enclaveRequest.customModel = customModel;
@@ -186,22 +195,18 @@ export class Heimdall{
 }
 
 export class TidePromise {
-    constructor() {
+    constructor(callback=null) {
         this.promise = new Promise((resolve, reject) => {
             // Store the resolve function to be called later
             this.resolve = resolve;
             this.reject = reject;
         });
+        this.callback = callback
     }
 
     fulfill(value) {
         // Fulfill the promise with the provided value
         this.resolve(value);
-    }
-
-    // Optional: A method to reject the promise, if needed
-    rejectPromise(reason) {
-        this.reject(reason);
     }
 }
 
