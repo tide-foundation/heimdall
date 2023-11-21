@@ -31,7 +31,7 @@ export class Heimdall{
     CloseEnclave(): void
 }
 export class TidePromise{
-    constructor(callback: function);
+    constructor(callback: function = null);
     callback: function;
     promise: Promise;
     fulfill(value: any): void
