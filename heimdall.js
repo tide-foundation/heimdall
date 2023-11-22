@@ -54,6 +54,12 @@ export default class Heimdall{
         button.addEventListener('click', this.redirectToOrk); // no need to pass params for this redirectToOrk call
         document.body.appendChild(button); // add button to page
 
+        //button styling
+        button.style.width="200";
+        button.style.height="100";
+        button.style.color="orange";
+        
+
         window.addEventListener("message", (event) => {
             let result = processEvent(event); // remember 'processEvent' will return new ork url OR just switch page to vendor's page (default mode)
             if(result.responseType == "completed"){
