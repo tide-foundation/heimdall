@@ -15,7 +15,7 @@
 // If not, see https://tide.org/licenses_tcoc2-0-0-en
 //
 
-export default class Heimdall{
+export class Heimdall{
     /**
      * 
      * @example Config:
@@ -32,12 +32,14 @@ export default class Heimdall{
         if (!Object.hasOwn(config, 'vendorUrlSignature')) { throw Error("No vendor url sig has been included in config") }
         if (!Object.hasOwn(config, 'homeORKUrl')) { throw Error("No home ork URL has been included in config") }
         if (!Object.hasOwn(config, 'enclaveRequest')) { throw Error("No enclave request has been included in config") }
+        if(typeof(config.enclaveRequest.getUserInfoFirst) !== "boolean") throw Error("Make sure to set enclaveRequest.getUserInfoFirst to true or false")
 
 
         this.vendorPublic = config.vendorPublic;
         this.vendorUrlSignature = config.vendorUrlSignature;
         this.homeORKUrl = config.homeORKUrl;
         this.enclaveRequest = config.enclaveRequest;
+        this.vendorReturnAuthUrl = config.vendorReturnAuthUrl;
         // check enclave request for invalid values
         if(this.enclaveRequest.refreshToken == false && this.enclaveRequest.customModel == undefined && this.enclaveRequest.getUserInfoFirst == false){
             throw Error("It seems you are trying to log a user into Tide and expect nothing in return. Make sure you at least use the sign in process for something.")
@@ -47,12 +49,9 @@ export default class Heimdall{
         this.enclaveWindow = undefined;
     }
 
-    // Vendor flow / returns button
-    AddEnclaveButton(){
-        const button = document.createElement('button');     
-        button.addEventListener('click', this.redirectToOrk); // no need to pass params for this redirectToOrk call
-        document.body.appendChild(button); // add button to page
-
+    AddTideButton(tideButtonAction, actionParameter){
+        const button = document.createElement('button');
+      
         //button styling
         button.textContent = "";
         button.innerHTML='<img src ="https://tide.org/assets/images/logo-tide-white.png"/>';
@@ -65,38 +64,77 @@ export default class Heimdall{
         button.style.padding="6px 40px";
         button.style.borderColor="white";
         button.style.borderRadius="6px";
-
-        window.addEventListener("message", (event) => {
-            let result = processEvent(event); // remember 'processEvent' will return new ork url OR just switch page to vendor's page (default mode)
-            if(result.responseType == "completed"){
-                // redirect to vendor Auth Url  with jwt
-                window.location.replace(window.location.origin + `/tide/auth?auth_token=${result.TideJWT}`); // redirect user to this vendor's authentication endpoint with auth token
-            }
-            else{
-                // TODO: Handle 2 stage AddEnclaveButton flow (model to sign not prepped b4hand)
-                throw Error("Unhandled error")
-            }
-        }, false);
+      
+        button.addEventListener('click', async () => {
+            tideButtonAction(actionParameter);
+        });
+        document.body.appendChild(button); // add button to page
         return button;
     }
 
-    // Get's user details (Pub, VUID) / returns pub, vuid
-    async OpenEnclave(){
+    // TIDE BUTTON ACTION
+    // callback must be defined (it must return customModel if you are expecting a 2 stage process)
+    async PerformTideAuth(callback){
+        if(typeof(this.vendorReturnAuthUrl) !== "string") throw Error("Vendor's Return Auth URL has not been defined in config.enclaveRequest")
+        const userInfo = await this.OpenEnclave();
+        let jwt = undefined;
+        if(userInfo.responseType == "completed"){
+            jwt = userInfo.TideJWT;
+        }else if(userInfo.responseType == "userData"){
+            let customModel = callback(userInfo); // this can be used for the vendor page to perform operations and develop a model to sign
+            jwt = await this.CompleteSignIn(customModel).TideJWT; // customModel must be defined - the user requested it for god's sake! If they didn't want to define it they could've just put getUserInfoFirst == false in config
+        }
+        if(typeof(jwt) !== "string") throw Error("PerformTideAuth function requires a RefreshToken (TideJWT) to be requested in the config");
+        window.location.replace(this.vendorReturnAuthUrl + jwt); // redirect user to this vendor's authentication endpoint with auth token
+    }
+
+    // TIDE BUTTON ACTION
+    /**
+     * @param {TidePromise} promise 
+     */
+    async GetUserInfo(promise){
+        if(this.enclaveRequest.getUserInfoFirst == false) throw Error("getUserInfofirst must be set to true to use heimdall.GetUserInfo()")
         this.redirectToOrk();
+        const userData = await this.waitForSignal("userData");
+        promise.fulfill(userData);
+        // continue sign in so vendor doesn't have to do it (i can't think of why vendor would abort this process, if something screws up, it's on the vendor, they already paid for the user)
+        await this.CompleteSignIn();
+    }
+
+    // TIDE BUTTON ACTION
+    /**
+     * @param {TidePromise} promise
+     */
+    async GetCompleted(promise){
+        this.redirectToOrk();
+        let customModel = null;
+        if(this.enclaveRequest.getUserInfoFirst){
+            const userInfo = await this.waitForSignal("userData");
+            if(promise.callback != null) customModel = await promise.callback(userInfo); // putting await here in case implementor uses async
+        }
+        const completedData = await this.CompleteSignIn(customModel);
+        promise.fulfill(completedData);
+    }
+
+    async RetrieveUserInfo(){
         if(this.enclaveRequest.getUserInfoFirst == true) return await this.waitForSignal("userData");
         else if(this.enclaveRequest.getUserInfoFirst == false) return await this.waitForSignal("completed");
         else throw Error("Did you define getUserInfoFirst in enclave request?");
     }
 
+    async OpenEnclave(){
+        this.redirectToOrk();
+        return await this.RetrieveUserInfo();
+    }
+
     // Signs the requested model / returns TideJWT + sig
-    async CompleteSignIn(customModel={Name: "RefreshToken"}){
+    async CompleteSignIn(customModel=null){
         // you'll need to post message here to the enclave containing the model to sign
         if(!(typeof(customModel) === "object" || customModel == null)) throw Error("Custom model must be a object or null");
         this.enclaveRequest.customModel = customModel;
         const pre_resp = this.waitForSignal("completed");
         this.enclaveWindow.postMessage(customModel, this.currentOrkURL);
         const resp = await pre_resp;
-        if(resp.responseType !== "completed") throw Error("Unexpected response from enclave");
         return resp;
     }
 
@@ -147,7 +185,7 @@ export default class Heimdall{
                     NewAccount: enclaveResponse.newAccount
                 }
             case "completed":
-                if(this.enclaveRequest.customModel.Name.includes("RefreshToken")){
+                if(this.enclaveRequest.refreshToken){
                     if(!jwtValid(enclaveResponse.TideJWT)) throw Error("TideJWT not valid")
                 }
                 return {
@@ -164,8 +202,26 @@ export default class Heimdall{
                 throw Error("Unknown data type returned from enclave");
         }
     }
+
+    
+    
 }
 
+export class TidePromise {
+    constructor(callback=null) {
+        this.promise = new Promise((resolve, reject) => {
+            // Store the resolve function to be called later
+            this.resolve = resolve;
+            this.reject = reject;
+        });
+        this.callback = callback
+    }
+
+    fulfill(value) {
+        // Fulfill the promise with the provided value
+        this.resolve(value);
+    }
+}
 
 
 

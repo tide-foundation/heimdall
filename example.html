@@ -5,21 +5,42 @@
         <p>Vendor HTML page</p>
 
     <script type="module">
-        import Heimdall from './heimdall.js';
+        import {Heimdall, TidePromise} from './heimdall.js';
         const config = {
-            vendorPublic: "Y108e3ZMMwisaSSmEvb7vKW3XgynnYvN6vZCf4gMJ+Q=",
-            vendorUrlSignature: "Ey0qaWB9fgMZ46Uj6tB8y3QnKatI9euuJ29QV5IsjpwKowQPBgIap6PaT7p8Zw5Ce2GozS5n7rBV4KFQnZ9rBA==",
-            homeORKUrl: "http://localhost:1002",
-            mode: "openssh",
+            vendorPublic: "+g/dDdxLqJMOLpJMZ3WIiJ1PEe/12bNhDoIBFmAvgR8=",
+            vendorUrlSignature: "0dYi2k4V8Qa5BfKkNSkqcCGQ4d1BIJm6+A5Pwl8DNbZcxQljPnbNk0KG5FTkWjDTbckKHSG7xi1xuzb38uy3Bg==",
+            homeORKUrl: "http://localhost:1001",
+            vendorReturnAuthUrl: "http://localhost:6001?jwt=",
+            enclaveRequest: {
+                getUserInfoFirst: true, // I want a 2 stage sign in (i either want the public key first, or want to provide a signature halfway)
+                refreshToken: true, // I want a TideJWT returned
+                customModel: undefined // I do not want to provide a customModel
+            }
         }
 
-        const modelToSign = "AAAAIMAQBthuuhaUTnQIYHxHv6glMZtyxsAZMYEb83cbbAkgMgAAAAR1c2VyAAAADnNzaC1jb25uZWN0aW9uAAAACXB1YmxpY2tleQEAAAALc3NoLWVkMjU1MTkAAAAzAAAAC3NzaC1lZDI1NTE5AAAAIJ67ux4/TCLHWNCA1+TxiW7rOaLAxbtyDKK4Sscu4aFB"
+        var modelToSign = "AAAAIMAQBthuuhaUTnQIYHxHv6glMZtyxsAZMYEb83cbbAkgMgAAAAR1c2VyAAAADnNzaC1jb25uZWN0aW9uAAAACXB1YmxpY2tleQEAAAALc3NoLWVkMjU1MTkAAAAzAAAAC3NzaC1lZDI1NTE5AAAAIJ67ux4/TCLHWNCA1+TxiW7rOaLAxbtyDKK4Sscu4aFB";
 
-        const heim = new Heimdall(config);
-        await heim.OpenEnclave();
-        // enclave stays open - dev can modify model to sign here
-        const resp = await heim.CompleteSignIn(modelToSign);
-        console.log(resp);
+        const heimdall = new Heimdall(config);
+
+        const vendorAction = async (userInfo) => {
+            console.log("This is where I'd create my model to sign or add a user etc. For example, here is the user public key: " + userInfo.PublicKey);
+            var customModel = {
+                Name: "OpenSSH",
+                Data: modelToSign
+            }
+            return customModel;
+        }
+
+        const tidePromise = new TidePromise(vendorAction);
+
+        const tideButtonAction = async (promise) => {
+            return heimdall.GetCompleted(promise);
+        }
+
+        const tideButton = heimdall.AddTideButton(tideButtonAction, tidePromise);
+        const resolvedData = await tidePromise.promise;
+        console.log(resolvedData.ModelSig) 
+        console.log(resolvedData.TideJWT)
 
     </script>  
     <script>
