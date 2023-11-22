@@ -51,10 +51,23 @@ export class Heimdall{
 
     AddTideButton(tideButtonAction, actionParameter){
         const button = document.createElement('button');
-        button.textContent = "Tide Button";
+      
+        //button styling
+        button.textContent = "";
+        button.innerHTML='<img src ="https://tide.org/assets/images/logo-tide-white.png"/>';
+        button.type="image";
+        button.style.width="200";
+        button.style.height="100";
+        button.style.background="orange";
+        button.style.color="white";
+        button.style.fontSize="13px";
+        button.style.padding="6px 40px";
+        button.style.borderColor="white";
+        button.style.borderRadius="6px";
+      
         button.addEventListener('click', async () => {
             tideButtonAction(actionParameter);
-        }); // no need to pass params for this redirectToOrk call
+        });
         document.body.appendChild(button); // add button to page
         return button;
     }
