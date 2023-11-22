@@ -12,7 +12,7 @@
             homeORKUrl: "http://localhost:1001",
             vendorReturnAuthUrl: "http://localhost:6001?jwt=",
             enclaveRequest: {
-                getUserInfoFirst: true, // I don't want a 2 stage sign in (i either want the public key first, or want to provide a signature halfway)
+                getUserInfoFirst: true, // I want a 2 stage sign in (i either want the public key first, or want to provide a signature halfway)
                 refreshToken: true, // I want a TideJWT returned
                 customModel: undefined // I do not want to provide a customModel
             }
