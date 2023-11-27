@@ -47,6 +47,7 @@ export class Heimdall{
 
         this.currentOrkURL = this.homeORKUrl;
         this.enclaveWindow = undefined;
+        this.enclaveFunction = "standard";
     }
 
     AddTideButton(tideButtonAction, actionParameter){
@@ -116,6 +117,30 @@ export class Heimdall{
         promise.fulfill(completedData);
     }
 
+    // TIDE BUTTON ACTION
+    /**
+     * @param {[string, FieldData, TidePromise]} params 
+     */
+    async EncryptUserData([tideJWT, fieldData, promise]){ // Tide JWT is required!
+        this.enclaveFunction = "encrypt";
+        // try opening an iframe in the current document first
+        // if that fails - for any reason (e.g. jwt expired, sessionkey not found, iframe blocked) - open the tide enclave
+
+
+
+        
+        this.redirectToOrk();
+        // send field data through window.postMessage so all of the vendor's super sensitive data isn't in the f***ing URL
+        const dataToSend = {
+            TideJWT: tideJWT,
+            FieldData: fieldData.getData()
+        }
+        this.enclaveWindow.postMessage(dataToSend, this.currentOrkURL);
+        const lockedFields = await this.waitForSignal("fieldsLocked");
+        promise.fulfill(lockedFields);
+    }
+
+
     async RetrieveUserInfo(){
         if(this.enclaveRequest.getUserInfoFirst == true) return await this.waitForSignal("userData");
         else if(this.enclaveRequest.getUserInfoFirst == false) return await this.waitForSignal("completed");
@@ -143,8 +168,21 @@ export class Heimdall{
         this.enclaveWindow.postMessage("VENDOR ERROR: Close Tide Enlcave", this.currentOrkURL);
     }
 
+    openHiddenIFrame(){
+        let iframe = document.createElement('iframe');
+        iframe.style.display = "none";
+        iframe.src = this.createOrkURL();
+
+        /// set up error handling here in case iframe encounters error and needs enclave
+        document.body.appendChild(iframe);
+    }
+
     redirectToOrk(){
-        this.enclaveWindow = window.open(this.currentOrkURL + `?vendorPublic=${encodeURIComponent(this.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.origin)}&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}&enclaveRequest=${encodeURIComponent(JSON.stringify(this.enclaveRequest))}&vendorOrks=0`, new Date().getTime(), 'width=800,height=800');
+        this.enclaveWindow = window.open(this.createOrkURL(), new Date().getTime(), 'width=800,height=800');
+    }
+
+    createOrkURL(){
+        return this.currentOrkURL + `?vendorPublic=${encodeURIComponent(this.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.origin)}&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}&enclaveRequest=${encodeURIComponent(JSON.stringify(this.enclaveRequest))}&enclaveFunction=${this.enclaveFunction}&vendorOrks=0`;
     }
 
     waitForSignal(responseTypeToAwait) {
@@ -220,6 +258,58 @@ export class TidePromise {
     fulfill(value) {
         // Fulfill the promise with the provided value
         this.resolve(value);
+    }
+}
+
+// 8 Bytes
+// 256 identifiers
+// map each identifier to a bit index
+// user will put all of their identifies in the contrustor
+// getTag will take multiple ids and provide the correct bitwise 
+export class IdentifierConvertor{
+    constructor(identifiers){
+        this.identifiers = identifiers
+    }
+    
+}
+export class FieldData {
+    /**
+     * @param {string[]} identifiers 
+     */
+    constructor(identifiers){
+        if(identifiers.length > 255) throw Error("Heimdall: Too many identifiers provided for FieldData");
+        this.identifiers = identifiers
+        this.datas = []
+    }
+
+    /**
+     * @param {string | Uint8Array} data 
+     * @param {string[]} ids 
+     */
+    add(data, ids){
+        var datum = {
+            Data: data,
+            Tag: this.getTag(ids)
+        }
+        this.datas.push(datum);
+    }
+
+    /**
+     * @param {string[]} ids 
+     */
+    getTag(ids){
+        var tag = 0; // its basically a mask
+        ids.forEach(id => {
+            // get index of id in id list
+            const index = this.identifiers.indexOf(id);
+            if(index == -1) throw Error("Id not found in identifiers");
+            tag = 1 << (index + 1);
+        });
+        return tag;
+    }
+
+    getData(){
+        return this.datas;
     }
 }
 
