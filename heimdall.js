@@ -125,19 +125,26 @@ export class Heimdall{
         this.enclaveFunction = "encrypt";
         // try opening an iframe in the current document first
         // if that fails - for any reason (e.g. jwt expired, sessionkey not found, iframe blocked) - open the tide enclave
+        this.openHiddenIFrame();
 
-
-
-        
-        this.redirectToOrk();
         // send field data through window.postMessage so all of the vendor's super sensitive data isn't in the f***ing URL
         const dataToSend = {
             TideJWT: tideJWT,
             FieldData: fieldData.getData()
         }
         this.enclaveWindow.postMessage(dataToSend, this.currentOrkURL);
-        const lockedFields = await this.waitForSignal("fieldsLocked");
-        promise.fulfill(lockedFields);
+
+        const iFrameResp = await this.waitForSignal('encryptedData');
+        if(iFrameResp.errorEncountered == false) {
+            promise.fulfill(iFrameResp.encryptedFields); // in case iframe worked - fulfill promise with data
+            return;
+        }
+
+        this.redirectToOrk(); // in case iframe didn't work - let's pull up our sweet enclave
+        this.enclaveWindow.postMessage(dataToSend, this.currentOrkURL); // gotta send it again for the new window / enclave
+        
+        const enclaveResp = await this.waitForSignal("encryptedData");
+        promise.fulfill(enclaveResp.encryptedFields);
     }
 
 
@@ -172,7 +179,7 @@ export class Heimdall{
         let iframe = document.createElement('iframe');
         iframe.style.display = "none";
         iframe.src = this.createOrkURL();
-
+        this.enclaveWindow = iframe.contentWindow;
         /// set up error handling here in case iframe encounters error and needs enclave
         document.body.appendChild(iframe);
     }
@@ -235,6 +242,12 @@ export class Heimdall{
                 this.currentOrkURL = enclaveResponse.url;
                 return {
                     responseType: "newORKUrl"
+                }
+            case "encryptedData":
+                return {
+                    responseType: "encryptedData",
+                    errorEncountered: enclaveResponse.errorEncountered,
+                    encryptedFields: enclaveResponse.encryptedFields
                 }
             default:
                 throw Error("Unknown data type returned from enclave");
