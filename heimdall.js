@@ -23,6 +23,7 @@ export class Heimdall{
     * vendorPublic: string //Make sure to create some public key for this
     * vendorUrlSignature: string //The value of this web page's URL (such as https://www.yoursite.com/login) signed (EdDSA) with this vendor's VVK.
     * homeORKUrl: string //Just the origin. For example => https://someOrk.com
+    * vvk: string // ONLY IF YOU ARE RUNNING THIS IN A SECURE, LOCAL, OBFUSSCATED CLIENT APP. NOT ON THE BROWSER!!!!
     * enclaveRequest: object // Contains the neccessary information on what how the enclave should behave and the information it returns
     * }
     * @param {object} config
@@ -48,6 +49,12 @@ export class Heimdall{
         this.currentOrkURL = this.homeORKUrl;
         this.enclaveWindow = undefined;
         this.enclaveFunction = "standard";
+
+        this.isApp = new URL(window.location.toString()).origin == null ? true : false;
+        if(this.isApp) {
+            if (!Object.hasOwn(config, 'vvk')) { throw Error("No vvk has been included in config. Since you are running an app with Heimdall, a vvk is required") } 
+            else {this.vvk = config.vvk};
+        }
     }
 
     AddTideButton(tideButtonAction, actionParameter){
@@ -73,9 +80,13 @@ export class Heimdall{
         return button;
     }
 
-    // TIDE BUTTON ACTION
-    // callback must be defined (it must return customModel if you are expecting a 2 stage process)
+    /**
+     * TIDE BUTTON ACTION
+     * callback must be defined (it must return customModel if you are expecting a 2 stage process)
+     * @param {function} callback 
+     */
     async PerformTideAuth(callback){
+        this.enclaveFunction = "standard";
         if(typeof(this.vendorReturnAuthUrl) !== "string") throw Error("Vendor's Return Auth URL has not been defined in config.enclaveRequest")
         const userInfo = await this.OpenEnclave();
         let jwt = undefined;
@@ -89,11 +100,12 @@ export class Heimdall{
         window.location.replace(this.vendorReturnAuthUrl + jwt); // redirect user to this vendor's authentication endpoint with auth token
     }
 
-    // TIDE BUTTON ACTION
     /**
+     * TIDE BUTTON ACTION
      * @param {TidePromise} promise 
      */
     async GetUserInfo(promise){
+        this.enclaveFunction = "standard";
         if(this.enclaveRequest.getUserInfoFirst == false) throw Error("getUserInfofirst must be set to true to use heimdall.GetUserInfo()")
         this.redirectToOrk();
         const userData = await this.waitForSignal("userData");
@@ -102,11 +114,12 @@ export class Heimdall{
         await this.CompleteSignIn();
     }
 
-    // TIDE BUTTON ACTION
     /**
+     * TIDE BUTTON ACTION
      * @param {TidePromise} promise
      */
     async GetCompleted(promise){
+        this.enclaveFunction = "standard";
         this.redirectToOrk();
         let customModel = null;
         if(this.enclaveRequest.getUserInfoFirst){
@@ -117,8 +130,8 @@ export class Heimdall{
         promise.fulfill(completedData);
     }
 
-    // TIDE BUTTON ACTION
     /**
+     * TIDE BUTTON ACTION
      * @param {[string, FieldData, TidePromise]} params 
      */
     async EncryptUserData([tideJWT, fieldData, promise]){ // Tide JWT is required!
@@ -145,6 +158,43 @@ export class Heimdall{
         
         const enclaveResp = await this.waitForSignal("encryptedData");
         promise.fulfill(enclaveResp.encryptedFields);
+    }
+
+    /**
+     * TIDE BUTTON ACTION
+     * @param {[string, FieldData, TidePromise]} params 
+     */
+    async TESTencryptUserDataTEST([tideJWT, fieldData, promise]){
+        const key = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
+        // encrypt each field with this key
+
+
+    }
+
+    /**
+     * @param {Uint8Array} secretBytes 
+     * @param {Uint8Array} key 
+     * @returns 
+     */
+    async TESTencryptDataTEST(secretBytes, key) {
+        const AESKey = window.crypto.subtle.importKey(
+            "raw",
+            key,
+            "AES-GCM",
+            true,
+            ["encrypt"]
+        );
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const encryptedBuffer = await window.crypto.subtle.encrypt(
+            { name: "AES-GCM", iv: iv },
+            AESKey,
+            secretBytes
+          );
+        const len = iv.length + (new Uint8Array(encryptedBuffer)).length;
+        const buff = new Uint8Array(len);
+        buff.set(iv);
+        buff.set(new Uint8Array(encryptedBuffer), iv.length);
+        return buff;
     }
 
 
@@ -184,12 +234,18 @@ export class Heimdall{
         document.body.appendChild(iframe);
     }
 
-    redirectToOrk(){
+    async redirectToOrk(){
         this.enclaveWindow = window.open(this.createOrkURL(), new Date().getTime(), 'width=800,height=800');
+        if(this.isApp){
+            // prepare to recieve challenge from enclave
+            const challenge = (await this.waitForSignal("enclaveChallenge")).challenge;
+            // sign challenge with vvk
+            // return signature with window.postMessage to enclave
+        }
     }
 
     createOrkURL(){
-        return this.currentOrkURL + `?vendorPublic=${encodeURIComponent(this.vendorPublic)}&vendorUrl=${encodeURIComponent(window.location.origin)}&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}&enclaveRequest=${encodeURIComponent(JSON.stringify(this.enclaveRequest))}&enclaveFunction=${this.enclaveFunction}&vendorOrks=0`;
+        return this.currentOrkURL + `?vendorPublic=${encodeURIComponent(this.vendorPublic)}&vendorLocation=${encodeURIComponent(window.location)}&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}&enclaveRequest=${encodeURIComponent(JSON.stringify(this.enclaveRequest))}&enclaveFunction=${this.enclaveFunction}&vendorOrks=0`;
     }
 
     waitForSignal(responseTypeToAwait) {
@@ -248,6 +304,11 @@ export class Heimdall{
                     responseType: "encryptedData",
                     errorEncountered: enclaveResponse.errorEncountered,
                     encryptedFields: enclaveResponse.encryptedFields
+                }
+            case "enclaveChallenge":
+                return {
+                    responseType: "enclaveChallenge",
+                    challenge: enclaveResponse.challenge
                 }
             default:
                 throw Error("Unknown data type returned from enclave");
