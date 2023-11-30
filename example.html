@@ -4,12 +4,12 @@
     <body>
         <p>Vendor HTML page</p>
 
-    <script type="module">
+    <!--script type="module">
         import {Heimdall, TidePromise} from './heimdall.js';
         const config = {
             vendorPublic: "+g/dDdxLqJMOLpJMZ3WIiJ1PEe/12bNhDoIBFmAvgR8=",
             vendorUrlSignature: "0dYi2k4V8Qa5BfKkNSkqcCGQ4d1BIJm6+A5Pwl8DNbZcxQljPnbNk0KG5FTkWjDTbckKHSG7xi1xuzb38uy3Bg==",
-            homeORKUrl: "http://localhost:1001",
+            homeORKUrl: "https://prod-ork1.azurewebsites.net",
             vendorReturnAuthUrl: "http://localhost:6001?jwt=",
             enclaveRequest: {
                 getUserInfoFirst: true, // I want a 2 stage sign in (i either want the public key first, or want to provide a signature halfway)
@@ -18,20 +18,10 @@
             }
         }
 
-        var modelToSign = "AAAAIMAQBthuuhaUTnQIYHxHv6glMZtyxsAZMYEb83cbbAkgMgAAAAR1c2VyAAAADnNzaC1jb25uZWN0aW9uAAAACXB1YmxpY2tleQEAAAALc3NoLWVkMjU1MTkAAAAzAAAAC3NzaC1lZDI1NTE5AAAAIJ67ux4/TCLHWNCA1+TxiW7rOaLAxbtyDKK4Sscu4aFB";
-
         const heimdall = new Heimdall(config);
 
-        const vendorAction = async (userInfo) => {
-            console.log("This is where I'd create my model to sign or add a user etc. For example, here is the user public key: " + userInfo.PublicKey);
-            var customModel = {
-                Name: "OpenSSH",
-                Data: modelToSign
-            }
-            return customModel;
-        }
 
-        const tidePromise = new TidePromise(vendorAction);
+        const tidePromise = new TidePromise();
 
         const tideButtonAction = async (promise) => {
             return heimdall.GetCompleted(promise);
@@ -39,8 +29,61 @@
 
         const tideButton = heimdall.AddTideButton(tideButtonAction, tidePromise);
         const resolvedData = await tidePromise.promise;
-        console.log(resolvedData.ModelSig) 
+        //console.log(resolvedData.ModelSig) 
         console.log(resolvedData.TideJWT)
+
+    </script-->  
+    <script type="module">
+        import {Heimdall, TidePromise, FieldData} from './heimdall.js';
+        const config = {
+            vendorPublic: "+g/dDdxLqJMOLpJMZ3WIiJ1PEe/12bNhDoIBFmAvgR8=",
+            vendorUrlSignature: "0dYi2k4V8Qa5BfKkNSkqcCGQ4d1BIJm6+A5Pwl8DNbZcxQljPnbNk0KG5FTkWjDTbckKHSG7xi1xuzb38uy3Bg==",
+            homeORKUrl: "https://prod-ork1.azurewebsites.net",
+            vendorReturnAuthUrl: "http://localhost:6001?jwt=",
+            enclaveRequest: {
+                getUserInfoFirst: true, // I want a 2 stage sign in (i either want the public key first, or want to provide a signature halfway)
+                refreshToken: true, // I want a TideJWT returned
+                customModel: undefined // I do not want to provide a customModel
+            }
+        }
+
+        const heimdall = new Heimdall(config);
+
+
+        const tidePromise = new TidePromise();
+        const jwt = "some tidejwt";
+        const fieldData = new FieldData(["password", "username"]);
+        fieldData.add("test to encrypt", ["password"]);
+        fieldData.add("test2", ["username"]);
+        fieldData.add("test3", ["username", "password"])
+
+        const params = [jwt, fieldData, tidePromise];
+
+        const tideButtonAction = async (params) => {
+            return heimdall.TESTencryptUserDataTEST(params);
+        }
+
+        const tideButtonAction2 = async (params) => {
+            return heimdall.TESTdecryptUserDataTEST(params);
+        }
+
+        const tideButton = heimdall.AddTideButton(tideButtonAction, params);
+        const encrypted = await tidePromise.promise;
+        console.log(encrypted)
+        tideButton.remove();
+
+        
+        const tidePromise2 = new TidePromise();
+        const params2 = [jwt, encrypted, tidePromise2];
+
+        const tideButton2 = heimdall.AddTideButton(tideButtonAction2, params2);
+        //console.log(resolvedData.ModelSig) 
+        const decrypted = await tidePromise2.promise;
+        tideButton2.remove()
+
+        const fieldData2 = new FieldData(["password", "username"]);
+        fieldData2.addManyWithTag(decrypted);
+        console.log(fieldData2.getAllWithIds());
 
     </script>  
     <script>
