@@ -52,8 +52,10 @@ export class Heimdall{
 
         this.isApp = new URL(window.location.toString()).origin == null ? true : false;
         if(this.isApp) {
-            if (!Object.hasOwn(config, 'vvk')) { throw Error("No vvk has been included in config. Since you are running an app with Heimdall, a vvk is required") } 
-            else {this.vvk = config.vvk};
+            if (!Object.hasOwn(config, 'appOriginText')) { throw Error("No appOriginText has been included in config. Since you are running an app with Heimdall, appOriginText is required") } 
+            if (!Object.hasOwn(config, 'appOriginTextSignature')) { throw Error("No appOriginTextSignature has been included in config. Since you are running an app with Heimdall, appOriginTextSignature is required") } 
+            this.appOriginText = config.appOriginText;
+            this.appOriginTextSignature = config.appOriginTextSignature;
         }
     }
 
@@ -135,29 +137,34 @@ export class Heimdall{
      * @param {[string, FieldData, TidePromise]} params 
      */
     async EncryptUserData([tideJWT, fieldData, promise]){ // Tide JWT is required!
-        this.enclaveFunction = "encrypt";
-        // try opening an iframe in the current document first
-        // if that fails - for any reason (e.g. jwt expired, sessionkey not found, iframe blocked) - open the tide enclave
-        this.openHiddenIFrame();
+        try{
+            this.enclaveFunction = "encrypt";
+            // try opening an iframe in the current document first
+            // if that fails - for any reason (e.g. jwt expired, sessionkey not found, iframe blocked) - open the tide enclave
+            this.openHiddenIFrame();
 
-        // send field data through window.postMessage so all of the vendor's super sensitive data isn't in the f***ing URL
-        const dataToSend = {
-            TideJWT: tideJWT,
-            FieldData: fieldData.getData()
+            // send field data through window.postMessage so all of the vendor's super sensitive data isn't in the f***ing URL
+            const dataToSend = {
+                TideJWT: tideJWT,
+                FieldData: fieldData.getData()
+            }
+            this.enclaveWindow.postMessage(dataToSend, this.currentOrkURL);
+
+            const iFrameResp = await this.waitForSignal('encryptedData');
+            if(iFrameResp.errorEncountered == false) {
+                promise.fulfill(iFrameResp.encryptedFields); // in case iframe worked - fulfill promise with data
+                return;
+            }
+
+            this.redirectToOrk(); // in case iframe didn't work - let's pull up our sweet enclave
+            this.enclaveWindow.postMessage(dataToSend, this.currentOrkURL); // gotta send it again for the new window / enclave
+            
+            const enclaveResp = await this.waitForSignal("encryptedData");
+            promise.fulfill(enclaveResp.encryptedFields);
+        }catch{
+            promise.reject(error);
         }
-        this.enclaveWindow.postMessage(dataToSend, this.currentOrkURL);
-
-        const iFrameResp = await this.waitForSignal('encryptedData');
-        if(iFrameResp.errorEncountered == false) {
-            promise.fulfill(iFrameResp.encryptedFields); // in case iframe worked - fulfill promise with data
-            return;
-        }
-
-        this.redirectToOrk(); // in case iframe didn't work - let's pull up our sweet enclave
-        this.enclaveWindow.postMessage(dataToSend, this.currentOrkURL); // gotta send it again for the new window / enclave
         
-        const enclaveResp = await this.waitForSignal("encryptedData");
-        promise.fulfill(enclaveResp.encryptedFields);
     }
 
     /**
@@ -165,10 +172,38 @@ export class Heimdall{
      * @param {[string, FieldData, TidePromise]} params 
      */
     async TESTencryptUserDataTEST([tideJWT, fieldData, promise]){
-        const key = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
-        // encrypt each field with this key
+        try{
+            //if(!jwtValid(tideJWT)) throw Error("Invalid TideJWT")
+            const key = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
+            // encrypt each field with this key
+            // encrypted data will be in the same order as provided
+            const enc = new TextEncoder();
+            const datas = fieldData.getAll().map(a => enc.encode(JSON.stringify(a)));
+            const pre_encrypted = datas.map(async (data) => await this.TESTencryptDataTEST(data, key));
+            const encrypted = await Promise.all(pre_encrypted);
+            promise.fulfill(encrypted)
+        }catch(error){
+            promise.reject(error);
+        }
+    }
 
+    /**
+     * @param {[string, Uint8Array[], TidePromise]} params 
+     */
+    async TESTdecryptUserDataTEST([tideJWT, encryptedData, promise]){
+        try{
+            //if(!jwtValid(tideJWT)) throw Error("Invalid TideJWT")
+            const key = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
+            const pre_decrypted = encryptedData.map(async (enc) => await this.TESTdecryptDataTEST(enc, key));
+            const decrypted = await Promise.all(pre_decrypted);
+            
+            const decoder = new TextDecoder('utf-8');
+            const data = decrypted.map(dec => JSON.parse(decoder.decode(dec)));
+            promise.fulfill(data);
 
+        }catch(error){
+            promise.reject(error);
+        }
     }
 
     /**
@@ -177,7 +212,7 @@ export class Heimdall{
      * @returns 
      */
     async TESTencryptDataTEST(secretBytes, key) {
-        const AESKey = window.crypto.subtle.importKey(
+        const AESKey = await window.crypto.subtle.importKey(
             "raw",
             key,
             "AES-GCM",
@@ -195,6 +230,32 @@ export class Heimdall{
         buff.set(iv);
         buff.set(new Uint8Array(encryptedBuffer), iv.length);
         return buff;
+    }
+
+    /**
+     * @param {Uint8Array} encryptedBytes 
+     * @param {Uint8Array} key 
+     * @returns 
+     */
+    async TESTdecryptDataTEST(encryptedBytes, key){
+        const AESKey = await window.crypto.subtle.importKey(
+            "raw",
+            key,
+            "AES-GCM",
+            true,
+            ["decrypt"]
+        );
+        const iv = encryptedBytes.slice(0, 12);
+        const data = encryptedBytes.slice(12)
+        const decryptedContent = await window.crypto.subtle.decrypt(
+            {
+                name: "AES-GCM",
+                iv: iv,
+            },
+            AESKey,
+            data
+        );
+        return decryptedContent;
     }
 
 
@@ -236,12 +297,6 @@ export class Heimdall{
 
     async redirectToOrk(){
         this.enclaveWindow = window.open(this.createOrkURL(), new Date().getTime(), 'width=800,height=800');
-        if(this.isApp){
-            // prepare to recieve challenge from enclave
-            const challenge = (await this.waitForSignal("enclaveChallenge")).challenge;
-            // sign challenge with vvk
-            // return signature with window.postMessage to enclave
-        }
     }
 
     createOrkURL(){
@@ -333,35 +388,30 @@ export class TidePromise {
         // Fulfill the promise with the provided value
         this.resolve(value);
     }
+
+    reject(error) {
+        this.reject(error);
+    }
 }
 
-// 8 Bytes
-// 256 identifiers
-// map each identifier to a bit index
-// user will put all of their identifies in the contrustor
-// getTag will take multiple ids and provide the correct bitwise 
-export class IdentifierConvertor{
-    constructor(identifiers){
-        this.identifiers = identifiers
-    }
-    
-}
 export class FieldData {
     /**
+     * These identifiers must ALWAYS - EVERY TIME HEIMDALL IS CALLED FROM THIS VENDOR - be supplied in the SAME ORDER. APPEND list for new identifiers
      * @param {string[]} identifiers 
      */
     constructor(identifiers){
         if(identifiers.length > 255) throw Error("Heimdall: Too many identifiers provided for FieldData");
+        if(identifiers.length == 0) throw Error("Identifiers list required to convert tags to ids");
         this.identifiers = identifiers
         this.datas = []
     }
 
     /**
-     * @param {string | Uint8Array} data 
+     * @param {string} data 
      * @param {string[]} ids 
      */
     add(data, ids){
-        var datum = {
+        let datum = {
             Data: data,
             Tag: this.getTag(ids)
         }
@@ -369,21 +419,70 @@ export class FieldData {
     }
 
     /**
+     * @param {string} data 
+     * @param {number} tag 
+     */
+    addWithTag(data, tag){
+        let datum = {
+            Data: data,
+            Tag: tag
+        }
+        this.datas.push(datum);
+    }
+
+    /**
+     * @param {object[]} fieldDatas 
+     */
+    addManyWithTag(fieldDatas){
+        if(this.datas.length > 0) throw Error("This FieldData object already has objects in its contents");
+        this.datas = fieldDatas.map(fd => {
+            if(!fd.Data || !fd.Tag) throw Error("Invalid field data supplied");
+            return fd;
+        })
+    }
+
+    getAll(){
+        return [...this.datas];
+    }
+
+    getAllWithIds(){
+        return this.datas.map(da => {
+            const datum = {
+                Data: da.Data,
+                Ids: this.getIds(da.Tag)
+            }
+            return datum;
+        })
+    }
+
+    /**
      * @param {string[]} ids 
      */
     getTag(ids){
-        var tag = 0; // its basically a mask
+        let tag = 0; // its basically a mask
         ids.forEach(id => {
             // get index of id in id list
             const index = this.identifiers.indexOf(id);
             if(index == -1) throw Error("Id not found in identifiers");
-            tag = 1 << (index + 1);
+            const mask = 1 << (index);
+            tag |= mask;
         });
         return tag;
     }
-
-    getData(){
-        return this.datas;
+    /**
+     * @param {number} tag 
+     */
+    getIds(tag){
+        const bitLen = this.identifiers.length;
+        let ids = [];
+        for(let i = 0; i < bitLen; i++){
+            const mask = 1 << i;
+            if((tag & mask) != 0){
+                const id = this.identifiers[i];
+                ids.push(id);
+            }
+        }
+        return ids;
     }
 }
 
