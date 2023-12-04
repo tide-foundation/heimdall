@@ -49,9 +49,9 @@
 
         const heimdall = new Heimdall(config);
 
+        const jwt = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiJjZGMxOTJhOGFmNzc5NjQwMmQzYjNlYzg4YzkzMWYxZmQzODc1YjQwMGRhOGFkZjg4MGI3Y2QzMDNhODFmODA1IiwiZXhwIjoxNzAxNjU2ODE5LCJnU2Vzc0tleVB1YiI6Ik95ZForZmROdWxCMHhwYm9jWGNLY3BHSS9kUGh5YTkwKzBwWmpKalhHanM9IiwiZ1ZWSyI6IjRnT3B0NElXeDRpckx6L3BLQ3dzM1BPa2RqOG9HSDBBb0pVTXpWdXQ4VTA9In0.4XLEzkJRklN0ZQt-GBGOtHOx-esomCIP0VXioaG-8Eu1eVdGFWJg-o22i4uiOIAnImcus5w1OIs2ze9gjJwHAw";
 
         const tidePromise = new TidePromise();
-        const jwt = "some tidejwt";
         const fieldData = new FieldData(["password", "username"]);
         fieldData.add("test to encrypt", ["password"]);
         fieldData.add("test2", ["username"]);
@@ -72,7 +72,7 @@
         console.log(encrypted)
         tideButton.remove();
 
-        
+
         const tidePromise2 = new TidePromise();
         const params2 = [jwt, encrypted, tidePromise2];
 
