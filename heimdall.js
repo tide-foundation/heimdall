@@ -23,21 +23,17 @@ export class Heimdall{
     * vendorPublic: string //Make sure to create some public key for this
     * vendorUrlSignature: string //The value of this web page's URL (such as https://www.yoursite.com/login) signed (EdDSA) with this vendor's VVK.
     * homeORKUrl: string //Just the origin. For example => https://someOrk.com
-    * vvk: string // ONLY IF YOU ARE RUNNING THIS IN A SECURE, LOCAL, OBFUSSCATED CLIENT APP. NOT ON THE BROWSER!!!!
     * enclaveRequest: object // Contains the neccessary information on what how the enclave should behave and the information it returns
     * }
     * @param {object} config
      */
     constructor(config){
         if (!Object.hasOwn(config, 'vendorPublic')) { throw Error("No vendor public key has been included in config") }
-        if (!Object.hasOwn(config, 'vendorUrlSignature')) { throw Error("No vendor url sig has been included in config") }
         if (!Object.hasOwn(config, 'homeORKUrl')) { throw Error("No home ork URL has been included in config") }
         if (!Object.hasOwn(config, 'enclaveRequest')) { throw Error("No enclave request has been included in config") }
         if(typeof(config.enclaveRequest.getUserInfoFirst) !== "boolean") throw Error("Make sure to set enclaveRequest.getUserInfoFirst to true or false")
 
-
         this.vendorPublic = config.vendorPublic;
-        this.vendorUrlSignature = config.vendorUrlSignature;
         this.homeORKUrl = config.homeORKUrl;
         this.enclaveRequest = config.enclaveRequest;
         this.vendorReturnAuthUrl = config.vendorReturnAuthUrl;
@@ -56,6 +52,9 @@ export class Heimdall{
             if (!Object.hasOwn(config, 'appOriginTextSignature')) { throw Error("No appOriginTextSignature has been included in config. Since you are running an app with Heimdall, appOriginTextSignature is required") } 
             this.appOriginText = config.appOriginText;
             this.appOriginTextSignature = config.appOriginTextSignature;
+        }else{
+            if (!Object.hasOwn(config, 'vendorUrlSignature')) { throw Error("No vendor url sig has been included in config") }
+            this.vendorUrlSignature = config.vendorUrlSignature;
         }
     }
 
@@ -300,7 +299,17 @@ export class Heimdall{
     }
 
     createOrkURL(){
-        return this.currentOrkURL + `?vendorPublic=${encodeURIComponent(this.vendorPublic)}&vendorLocation=${encodeURIComponent(window.location)}&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}&enclaveRequest=${encodeURIComponent(JSON.stringify(this.enclaveRequest))}&enclaveFunction=${this.enclaveFunction}&vendorOrks=0`;
+        return this.currentOrkURL + 
+        `?vendorPublic=${encodeURIComponent(this.vendorPublic)}` +
+        `&vendorLocation=${encodeURIComponent(window.location)}` +
+        this.isApp ? 
+            `&vendorOriginText=${encodeURIComponent(this.appOriginText)}&vendorOriginTextSig=${encodeURIComponent(this.appOriginTextSignature)}` 
+            : `&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}`
+        +
+        `&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}` +
+        `&enclaveRequest=${encodeURIComponent(JSON.stringify(this.enclaveRequest))}` +
+        `&enclaveFunction=${this.enclaveFunction}` +
+        `&vendorOrks=0`;
     }
 
     waitForSignal(responseTypeToAwait) {
