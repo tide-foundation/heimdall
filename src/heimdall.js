@@ -301,7 +301,7 @@ export class Heimdall{
     createOrkURL(){
         return this.currentOrkURL + 
         `?vendorPublic=${encodeURIComponent(this.vendorPublic)}` +
-        `&vendorLocation=${encodeURIComponent(window.location)}` +
+        `&vendorLocation=${encodeURIComponent(window.location.origin)}` +
         `${this.isApp ? 
             `&vendorOriginText=${encodeURIComponent(this.appOriginText)}&vendorOriginTextSig=${encodeURIComponent(this.appOriginTextSignature)}` 
             : `&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}`}`
