@@ -1,8 +1,7 @@
 {
   "name": "heimdall-tide",
-  "version": "0.0.43-test",
+  "version": "0.0.44-test",
   "description": "Allows for Integration with Tide",
-  "type": "module",
   "main": "./dist/heimdall.js",
   "module": "./src/heimdall.js",
   "exports":{
