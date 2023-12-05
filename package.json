@@ -1,12 +1,12 @@
 {
   "name": "heimdall-tide",
-  "version": "0.0.44-test",
+  "version": "0.0.45-test",
   "description": "Allows for Integration with Tide",
-  "main": "./dist/heimdall.js",
+  "main": "./dist/heimdall.cjs",
   "module": "./src/heimdall.js",
   "exports":{
     "import": "./src/heimdall.js",
-    "require": "./dist/heimdall.js"
+    "require": "./dist/heimdall.cjs"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
