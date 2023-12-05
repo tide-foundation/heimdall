@@ -302,9 +302,9 @@ export class Heimdall{
         return this.currentOrkURL + 
         `?vendorPublic=${encodeURIComponent(this.vendorPublic)}` +
         `&vendorLocation=${encodeURIComponent(window.location)}` +
-        this.isApp ? 
+        `${this.isApp ? 
             `&vendorOriginText=${encodeURIComponent(this.appOriginText)}&vendorOriginTextSig=${encodeURIComponent(this.appOriginTextSignature)}` 
-            : `&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}`
+            : `&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}`}`
         +
         `&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}` +
         `&enclaveRequest=${encodeURIComponent(JSON.stringify(this.enclaveRequest))}` +
