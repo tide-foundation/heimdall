@@ -31,12 +31,14 @@ export class Heimdall{
         if (!Object.hasOwn(config, 'vendorPublic')) { throw Error("No vendor public key has been included in config") }
         if (!Object.hasOwn(config, 'homeORKUrl')) { throw Error("No home ork URL has been included in config") }
         if (!Object.hasOwn(config, 'enclaveRequest')) { throw Error("No enclave request has been included in config") }
+        if (!Object.hasOwn(config, 'vendorLocationSignature')) { throw Error("No vendor url sig has been included in config") }
         if(typeof(config.enclaveRequest.getUserInfoFirst) !== "boolean") throw Error("Make sure to set enclaveRequest.getUserInfoFirst to true or false")
 
         this.vendorPublic = config.vendorPublic;
         this.homeORKUrl = config.homeORKUrl;
         this.enclaveRequest = config.enclaveRequest;
         this.vendorReturnAuthUrl = config.vendorReturnAuthUrl;
+        this.vendorLocationSignature = config.vendorLocationSignature;
         // check enclave request for invalid values
         if(this.enclaveRequest.refreshToken == false && this.enclaveRequest.customModel == undefined && this.enclaveRequest.getUserInfoFirst == false){
             throw Error("It seems you are trying to log a user into Tide and expect nothing in return. Make sure you at least use the sign in process for something.")
@@ -46,15 +48,15 @@ export class Heimdall{
         this.enclaveWindow = undefined;
         this.enclaveFunction = "standard";
 
-        this.isApp = new URL(window.location.toString()).origin == null ? true : false;
-        if(this.isApp) {
-            if (!Object.hasOwn(config, 'appOriginText')) { throw Error("No appOriginText has been included in config. Since you are running an app with Heimdall, appOriginText is required") } 
-            if (!Object.hasOwn(config, 'appOriginTextSignature')) { throw Error("No appOriginTextSignature has been included in config. Since you are running an app with Heimdall, appOriginTextSignature is required") } 
-            this.appOriginText = config.appOriginText;
-            this.appOriginTextSignature = config.appOriginTextSignature;
+        let locationURL = new URL(window.location.href)
+        this.isExtension = locationURL.protocol === "chrome-extension:" ? true : false;
+        if(locationURL.protocol !== "http:" && locationURL.protocol !== "https:") throw Error("Heimdall is not supported in whatever application you are using");
+
+        if(this.isExtension){
+            if((typeof chrome === "undefined" || !chrome.runtime)) throw Error("Heimdall is being run in a chrome extension without access to chrome runtime");
+            this.vendorLocation = chrome.runtime.id;
         }else{
-            if (!Object.hasOwn(config, 'vendorUrlSignature')) { throw Error("No vendor url sig has been included in config") }
-            this.vendorUrlSignature = config.vendorUrlSignature;
+            this.vendorLocation = window.location.href;
         }
     }
 
@@ -147,7 +149,7 @@ export class Heimdall{
                 TideJWT: tideJWT,
                 FieldData: fieldData.getData()
             }
-            this.enclaveWindow.postMessage(dataToSend, this.currentOrkURL);
+            this.sendMessage(dataToSend);
 
             const iFrameResp = await this.waitForSignal('encryptedData');
             if(iFrameResp.errorEncountered == false) {
@@ -156,7 +158,7 @@ export class Heimdall{
             }
 
             this.redirectToOrk(); // in case iframe didn't work - let's pull up our sweet enclave
-            this.enclaveWindow.postMessage(dataToSend, this.currentOrkURL); // gotta send it again for the new window / enclave
+            this.sendMessage(dataToSend); // gotta send it again for the new window / enclave
             
             const enclaveResp = await this.waitForSignal("encryptedData");
             promise.fulfill(enclaveResp.encryptedFields);
@@ -275,14 +277,14 @@ export class Heimdall{
         if(!(typeof(customModel) === "object" || customModel == null)) throw Error("Custom model must be a object or null");
         this.enclaveRequest.customModel = customModel;
         const pre_resp = this.waitForSignal("completed");
-        this.enclaveWindow.postMessage(customModel, this.currentOrkURL);
+        this.sendMessage(customModel);
         const resp = await pre_resp;
         return resp;
     }
 
     // In case of vendor side error, we can close enclave
     CloseEnclave(){
-        this.enclaveWindow.postMessage("VENDOR ERROR: Close Tide Enlcave", this.currentOrkURL);
+        this.sendMessage("VENDOR ERROR: Close Tide Enlcave");
     }
 
     openHiddenIFrame(){
@@ -295,49 +297,94 @@ export class Heimdall{
     }
 
     async redirectToOrk(){
-        this.enclaveWindow = window.open(this.createOrkURL(), new Date().getTime(), 'width=800,height=800');
+        if(this.isExtension){
+            /// TODO TODO TODO
+            // I'm 99% sure that if a user does ork rehoming while using heimdall through a extension - it will break due to the listener/port being created at the start. Fix ASAP
+            // opening ork for first time
+            const handler = (port) => {
+                if(port.sender.origin !== this.currentOrkURL) chrome.runtime.onConnectExternal.removeListener(handler); // someone else connected to us
+                else this.extensionPort = port; // we connected to the right ork
+            }
+            chrome.runtime.onConnectExternal.addListener(handler);
+
+            // open enclave here
+            chrome.windows.create({ 
+                url: this.createOrkURL(),
+                width: 800,  // Specify the desired width in pixels
+                height: 800  // Specify the desired height in pixels
+            });
+        }else{
+            this.enclaveWindow = window.open(this.createOrkURL(), new Date().getTime(), 'width=800,height=800');
+        }
     }
 
     createOrkURL(){
         return this.currentOrkURL + 
         `?vendorPublic=${encodeURIComponent(this.vendorPublic)}` +
-        `&vendorLocation=${encodeURIComponent(window.location.origin)}` +
-        `${this.isApp ? 
-            `&vendorOriginText=${encodeURIComponent(this.appOriginText)}&vendorOriginTextSig=${encodeURIComponent(this.appOriginTextSignature)}` 
-            : `&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}`}`
-        +
-        `&vendorUrlSig=${encodeURIComponent(this.vendorUrlSignature)}` +
+        `&vendorLocation=${encodeURIComponent(this.vendorLocation)}` +
+        `&vendorLocationSig=${encodeURIComponent(this.vendorLocationSignature)}` +
         `&enclaveRequest=${encodeURIComponent(JSON.stringify(this.enclaveRequest))}` +
         `&enclaveFunction=${this.enclaveFunction}` +
         `&vendorOrks=0`;
     }
 
     waitForSignal(responseTypeToAwait) {
-        return new Promise((resolve) => {
-            const handler = (event) => {
-                const response = this.processEvent(event);
-                if(response.responseType === responseTypeToAwait){
-                    window.removeEventListener("message", handler);
-                    resolve(response);
+        if(this.isExtension){
+            if(this.extensionPort == undefined){
+                // we haven't connected to the enclave yet
+                throw Error("Must open enclave before calling waitForSignal() as an extension");
+            }
+            return new Promise((resolve) => {
+                const handler = (msg) => {
+                    const response = this.processEvent(msg, this.currentOrkURL); // i pass currentORKUrl here as we know previously we connected to the right ork (in redirectToOrk())
+                    if(response.responseType === responseTypeToAwait){
+                        this.extensionPort.onMessage.removeListener(handler);
+                        resolve(response);
+                    } 
                 }
-                
-            };
-            window.addEventListener("message", handler, false);
-        });
+                this.extensionPort.onMessage.addListener(handler);
+            });
+            
+        }else{
+            return new Promise((resolve) => {
+                const handler = (event) => {
+                    const response = this.processEvent(event.data, event.origin);
+                    if(response.responseType === responseTypeToAwait){
+                        resolve(response);
+                    }  
+                };
+                window.addEventListener("message", handler, { once: true });
+            });
+        }
+    }
+
+    sendMessage(message){
+        if(this.isExtension){
+            if(this.extensionPort == undefined){
+                // we haven't connected to the enclave yet
+                throw Error("Must open enclave before calling sendMessage() as an extension");
+            }
+            else{
+                this.extensionPort.postMessage(message);
+            }
+        }
+        else{
+            this.enclaveWindow.postMessage(message, this.currentOrkURL);
+        }
     }
 
     /**
  * 
- * @param {MessageEvent} event 
- * @param {string} mode
+ * @param {string} data 
+ * @param {string} origin
  */
-    processEvent(event){
-        if (event.origin !== this.currentOrkURL) {
+    processEvent(data, origin){
+        if (origin !== this.currentOrkURL) {
             // Something's not right... The message has come from an unknown domain... 
             return {status: "NOT OK", data: "WRONG WINDOW SENT MESSAGE"};
         }
 
-        const enclaveResponse = event.data; // this will contain the jwt signed by the orks from a successful sign in 
+        const enclaveResponse = data; // this will contain the jwt signed by the orks from a successful sign in 
 
         if(enclaveResponse.ok != true) throw Error("Tide Enclave had an error: " + enclaveResponse.message);
 
