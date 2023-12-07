@@ -31,14 +31,12 @@ export class Heimdall{
         if (!Object.hasOwn(config, 'vendorPublic')) { throw Error("No vendor public key has been included in config") }
         if (!Object.hasOwn(config, 'homeORKUrl')) { throw Error("No home ork URL has been included in config") }
         if (!Object.hasOwn(config, 'enclaveRequest')) { throw Error("No enclave request has been included in config") }
-        if (!Object.hasOwn(config, 'vendorLocationSignature')) { throw Error("No vendor url sig has been included in config") }
         if(typeof(config.enclaveRequest.getUserInfoFirst) !== "boolean") throw Error("Make sure to set enclaveRequest.getUserInfoFirst to true or false")
 
         this.vendorPublic = config.vendorPublic;
         this.homeORKUrl = config.homeORKUrl;
         this.enclaveRequest = config.enclaveRequest;
         this.vendorReturnAuthUrl = config.vendorReturnAuthUrl;
-        this.vendorLocationSignature = config.vendorLocationSignature;
         // check enclave request for invalid values
         if(this.enclaveRequest.refreshToken == false && this.enclaveRequest.customModel == undefined && this.enclaveRequest.getUserInfoFirst == false){
             throw Error("It seems you are trying to log a user into Tide and expect nothing in return. Make sure you at least use the sign in process for something.")
@@ -51,19 +49,29 @@ export class Heimdall{
         let locationURL = new URL(window.location.href)
         this.heimdallPlatform = "";
         if(locationURL.protocol === "http:" || locationURL.protocol === "https:"){
+            if (!Object.hasOwn(config, 'vendorLocationSignature')) { throw Error("No vendor url sig has been included in config") }
+            this.vendorLocationSignature = config.vendorLocationSignature;
             this.heimdallPlatform = "website";
+            this.vendorLocation = window.location.origin;
         } 
         else if(locationURL.protocol === "chrome-extension:"){
+            if (!Object.hasOwn(config, 'vendorLocationSignature')) { throw Error("No vendor url sig has been included in config") }
+            this.vendorLocationSignature = config.vendorLocationSignature;
             this.heimdallPlatform = "extension";
+            if((typeof chrome === "undefined" || !chrome.runtime)) throw Error("Heimdall is being run in a chrome extension without access to chrome runtime");
+            this.vendorLocation = chrome.runtime.id;
+            this.extensionPort = undefined;
+        }
+        else if(locationURL.protocol === "file:"){
+            this.heimdallPlatform = "app";
+            if (!Object.hasOwn(config, 'appOriginText')) { throw Error("No appOriginText has been included in config. Since you are running an app with Heimdall, appOriginText is required") } 
+            if (!Object.hasOwn(config, 'appOriginTextSignature')) { throw Error("No appOriginTextSignature has been included in config. Since you are running an app with Heimdall, appOriginTextSignature is required") } 
+            this.appOriginText = config.appOriginText;
+            this.appOriginTextSignature = config.appOriginTextSignature;
+            this.vendorLocation = window.location.href; // this isn't going to be used in any meaningful way
         }
         else{
             throw Error("Heimdall is not supported in whatever application you are using");
-        }
-        if(this.heimdallPlatform == "extension"){
-            if((typeof chrome === "undefined" || !chrome.runtime)) throw Error("Heimdall is being run in a chrome extension without access to chrome runtime");
-            this.vendorLocation = chrome.runtime.id;
-        }else{
-            this.vendorLocation = window.location.href;
         }
     }
 
@@ -117,7 +125,7 @@ export class Heimdall{
     async GetUserInfo(promise){
         this.enclaveFunction = "standard";
         if(this.enclaveRequest.getUserInfoFirst == false) throw Error("getUserInfofirst must be set to true to use heimdall.GetUserInfo()")
-        this.redirectToOrk();
+        await this.redirectToOrk();
         const userData = await this.waitForSignal("userData");
         promise.fulfill(userData);
         // continue sign in so vendor doesn't have to do it (i can't think of why vendor would abort this process, if something screws up, it's on the vendor, they already paid for the user)
@@ -130,7 +138,7 @@ export class Heimdall{
      */
     async GetCompleted(promise){
         this.enclaveFunction = "standard";
-        this.redirectToOrk();
+        await this.redirectToOrk();
         let customModel = null;
         if(this.enclaveRequest.getUserInfoFirst){
             const userInfo = await this.waitForSignal("userData");
@@ -164,7 +172,7 @@ export class Heimdall{
                 return;
             }
 
-            this.redirectToOrk(); // in case iframe didn't work - let's pull up our sweet enclave
+            await this.redirectToOrk(); // in case iframe didn't work - let's pull up our sweet enclave
             this.sendMessage(dataToSend); // gotta send it again for the new window / enclave
             
             const enclaveResp = await this.waitForSignal("encryptedData");
@@ -274,7 +282,7 @@ export class Heimdall{
     }
 
     async OpenEnclave(){
-        this.redirectToOrk();
+        await this.redirectToOrk();
         return await this.RetrieveUserInfo();
     }
 
@@ -308,11 +316,14 @@ export class Heimdall{
             /// TODO TODO TODO
             // I'm 99% sure that if a user does ork rehoming while using heimdall through a extension - it will break due to the listener/port being created at the start. Fix ASAP
             // opening ork for first time
-            const handler = (port) => {
-                if(port.sender.origin !== this.currentOrkURL) chrome.runtime.onConnectExternal.removeListener(handler); // someone else connected to us
-                else this.extensionPort = port; // we connected to the right ork
-            }
-            chrome.runtime.onConnectExternal.addListener(handler);
+            const openEnclavePromise = new Promise((resolve) => {
+                const handler = (port) => {
+                    if(port.sender.origin !== this.currentOrkURL) chrome.runtime.onConnectExternal.removeListener(handler); // someone else connected to us
+                    else this.extensionPort = port; // we connected to the right ork
+                    resolve("done");
+                }
+                chrome.runtime.onConnectExternal.addListener(handler);
+            });
 
             // open enclave here
             chrome.windows.create({ 
@@ -320,6 +331,8 @@ export class Heimdall{
                 width: 800,  // Specify the desired width in pixels
                 height: 800  // Specify the desired height in pixels
             });
+
+            await openEnclavePromise;
         }else{
             this.enclaveWindow = window.open(this.createOrkURL(), new Date().getTime(), 'width=800,height=800');
         }
@@ -330,6 +343,10 @@ export class Heimdall{
         `?vendorPublic=${encodeURIComponent(this.vendorPublic)}` +
         `&vendorPlatform=${encodeURIComponent(this.heimdallPlatform)}` +
         `&vendorLocation=${encodeURIComponent(this.vendorLocation)}` +
+        (this.heimdallPlatform === "app" 
+        ? `&vendorOriginText=${encodeURIComponent(this.appOriginText)}&vendorOriginTextSig=${encodeURIComponent(this.appOriginTextSignature)}` 
+        : `&vendorLocationSig=${encodeURIComponent(this.vendorLocationSignature)}`)
+        +
         `&vendorLocationSig=${encodeURIComponent(this.vendorLocationSignature)}` +
         `&enclaveRequest=${encodeURIComponent(JSON.stringify(this.enclaveRequest))}` +
         `&enclaveFunction=${this.enclaveFunction}` +
@@ -359,9 +376,10 @@ export class Heimdall{
                     const response = this.processEvent(event.data, event.origin);
                     if(response.responseType === responseTypeToAwait){
                         resolve(response);
+                        window.removeEventListener("message", handler);
                     }  
                 };
-                window.addEventListener("message", handler, { once: true });
+                window.addEventListener("message", handler, false);
             });
         }
     }
