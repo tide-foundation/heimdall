@@ -49,10 +49,17 @@ export class Heimdall{
         this.enclaveFunction = "standard";
 
         let locationURL = new URL(window.location.href)
-        this.isExtension = locationURL.protocol === "chrome-extension:" ? true : false;
-        if(locationURL.protocol !== "http:" && locationURL.protocol !== "https:") throw Error("Heimdall is not supported in whatever application you are using");
-
-        if(this.isExtension){
+        this.heimdallPlatform = "";
+        if(locationURL.protocol === "http:" || locationURL.protocol === "https:"){
+            this.heimdallPlatform = "website";
+        } 
+        else if(locationURL.protocol === "chrome-extension:"){
+            this.heimdallPlatform = "extension";
+        }
+        else{
+            throw Error("Heimdall is not supported in whatever application you are using");
+        }
+        if(this.heimdallPlatform == "extension"){
             if((typeof chrome === "undefined" || !chrome.runtime)) throw Error("Heimdall is being run in a chrome extension without access to chrome runtime");
             this.vendorLocation = chrome.runtime.id;
         }else{
@@ -297,7 +304,7 @@ export class Heimdall{
     }
 
     async redirectToOrk(){
-        if(this.isExtension){
+        if(this.heimdallPlatform == "extension"){
             /// TODO TODO TODO
             // I'm 99% sure that if a user does ork rehoming while using heimdall through a extension - it will break due to the listener/port being created at the start. Fix ASAP
             // opening ork for first time
@@ -321,6 +328,7 @@ export class Heimdall{
     createOrkURL(){
         return this.currentOrkURL + 
         `?vendorPublic=${encodeURIComponent(this.vendorPublic)}` +
+        `&vendorPlatform=${encodeURIComponent(this.heimdallPlatform)}` +
         `&vendorLocation=${encodeURIComponent(this.vendorLocation)}` +
         `&vendorLocationSig=${encodeURIComponent(this.vendorLocationSignature)}` +
         `&enclaveRequest=${encodeURIComponent(JSON.stringify(this.enclaveRequest))}` +
@@ -329,7 +337,7 @@ export class Heimdall{
     }
 
     waitForSignal(responseTypeToAwait) {
-        if(this.isExtension){
+        if(this.heimdallPlatform == "extension"){
             if(this.extensionPort == undefined){
                 // we haven't connected to the enclave yet
                 throw Error("Must open enclave before calling waitForSignal() as an extension");
@@ -359,7 +367,7 @@ export class Heimdall{
     }
 
     sendMessage(message){
-        if(this.isExtension){
+        if(this.heimdallPlatform == "extension"){
             if(this.extensionPort == undefined){
                 // we haven't connected to the enclave yet
                 throw Error("Must open enclave before calling sendMessage() as an extension");
