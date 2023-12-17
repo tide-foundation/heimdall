@@ -166,7 +166,7 @@ export class Heimdall{
             }
             this.sendMessage(dataToSend);
 
-            const iFrameResp = await this.waitForSignal('encryptedData');
+            const iFrameResp = await this.waitForSignal('iframeData');
             if(iFrameResp.errorEncountered == false) {
                 promise.fulfill(iFrameResp.encryptedFields); // in case iframe worked - fulfill promise with data
                 return;
@@ -175,7 +175,7 @@ export class Heimdall{
             await this.redirectToOrk(); // in case iframe didn't work - let's pull up our sweet enclave
             this.sendMessage(dataToSend); // gotta send it again for the new window / enclave
             
-            const enclaveResp = await this.waitForSignal("encryptedData");
+            const enclaveResp = await this.waitForSignal("iframeData");
             promise.fulfill(enclaveResp.encryptedFields);
         }catch{
             promise.reject(error);
@@ -436,16 +436,11 @@ export class Heimdall{
                 return {
                     responseType: "newORKUrl"
                 }
-            case "encryptedData":
+            case "iframeData":
                 return {
-                    responseType: "encryptedData",
+                    responseType: "iframeData",
                     errorEncountered: enclaveResponse.errorEncountered,
                     encryptedFields: enclaveResponse.encryptedFields
-                }
-            case "enclaveChallenge":
-                return {
-                    responseType: "enclaveChallenge",
-                    challenge: enclaveResponse.challenge
                 }
             default:
                 throw Error("Unknown data type returned from enclave");
