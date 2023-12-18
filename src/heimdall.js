@@ -152,7 +152,7 @@ export class Heimdall{
      * TIDE BUTTON ACTION
      * @param {[string, FieldData, TidePromise]} params 
      */
-    async EncryptUserData([tideJWT, fieldData, promise]){ // Tide JWT is required!
+    async EncryptUserData([vuid, fieldData, promise]){ // Tide JWT is required!
         try{
             this.enclaveFunction = "encrypt";
             // try opening an iframe in the current document first
@@ -161,7 +161,7 @@ export class Heimdall{
 
             // send field data through window.postMessage so all of the vendor's super sensitive data isn't in the f***ing URL
             const dataToSend = {
-                TideJWT: tideJWT,
+                VUID: vuid,
                 FieldData: fieldData.getData()
             }
             this.sendMessage(dataToSend);
