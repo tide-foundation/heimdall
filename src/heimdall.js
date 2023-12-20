@@ -162,7 +162,7 @@ export class Heimdall{
             // send field data through window.postMessage so all of the vendor's super sensitive data isn't in the f***ing URL
             const dataToSend = {
                 VUID: vuid,
-                FieldData: fieldData.getData()
+                FieldData: fieldData.getAll()
             }
             this.sendMessage(dataToSend);
 
