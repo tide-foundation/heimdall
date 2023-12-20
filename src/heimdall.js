@@ -484,7 +484,7 @@ export class FieldData {
     }
 
     /**
-     * @param {string} data 
+     * @param {Uint8Array} data 
      * @param {string[]} ids 
      */
     add(data, ids){
@@ -496,7 +496,7 @@ export class FieldData {
     }
 
     /**
-     * @param {string} data 
+     * @param {Uint8Array} data 
      * @param {number} tag 
      */
     addWithTag(data, tag){
