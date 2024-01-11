@@ -31,14 +31,13 @@ export class Heimdall{
         if (!Object.hasOwn(config, 'vendorPublic')) { throw Error("No vendor public key has been included in config") }
         if (!Object.hasOwn(config, 'homeORKUrl')) { throw Error("No home ork URL has been included in config") }
         if (!Object.hasOwn(config, 'enclaveRequest')) { throw Error("No enclave request has been included in config") }
-        if(typeof(config.enclaveRequest.getUserInfoFirst) !== "boolean") throw Error("Make sure to set enclaveRequest.getUserInfoFirst to true or false")
 
         this.vendorPublic = config.vendorPublic;
         this.homeORKUrl = config.homeORKUrl;
         this.enclaveRequest = config.enclaveRequest;
         this.vendorReturnAuthUrl = config.vendorReturnAuthUrl;
         // check enclave request for invalid values
-        if(this.enclaveRequest.refreshToken == false && this.enclaveRequest.customModel == undefined && this.enclaveRequest.getUserInfoFirst == false){
+        if(this.enclaveRequest.refreshToken == false && this.enclaveRequest.customModel == undefined){
             throw Error("It seems you are trying to log a user into Tide and expect nothing in return. Make sure you at least use the sign in process for something.")
         }
 
@@ -75,7 +74,7 @@ export class Heimdall{
         }
     }
 
-    AddTideButton(tideButtonAction, actionParameter){
+    AddTideButton(tideButtonAction, actionParameter=null){ // action parameter can be null for PerformTideAuth 1 Step
         const button = document.createElement('button');
       
         //button styling
@@ -100,20 +99,26 @@ export class Heimdall{
 
     /**
      * TIDE BUTTON ACTION
-     * callback must be defined (it must return customModel if you are expecting a 2 stage process)
      * @param {function} callback 
      */
-    async PerformTideAuth(callback){
+    async PerformTideAuth(callback=null){
+        await this.redirectToOrk();
+
         this.enclaveFunction = "standard";
         if(typeof(this.vendorReturnAuthUrl) !== "string") throw Error("Vendor's Return Auth URL has not been defined in config.enclaveRequest")
-        const userInfo = await this.OpenEnclave();
+
         let jwt = undefined;
-        if(userInfo.responseType == "completed"){
+        if(callback == null){
+            // expect completed
+            const userInfo = await this.waitForSignal("completed");
             jwt = userInfo.TideJWT;
-        }else if(userInfo.responseType == "userData"){
-            let customModel = callback(userInfo); // this can be used for the vendor page to perform operations and develop a model to sign
-            jwt = await this.CompleteSignIn(customModel).TideJWT; // customModel must be defined - the user requested it for god's sake! If they didn't want to define it they could've just put getUserInfoFirst == false in config
+        }else{
+            // expect userData
+            const userInfo = await this.waitForSignal("userData");
+            callback(userInfo); // this can be used for the vendor page to perform operations before user signs in/up to tide
+            jwt = await this.CompleteSignIn(null).TideJWT; // null for customModel as no signedModel will be returned
         }
+
         if(typeof(jwt) !== "string") throw Error("PerformTideAuth function requires a RefreshToken (TideJWT) to be requested in the config");
         window.location.replace(this.vendorReturnAuthUrl + jwt); // redirect user to this vendor's authentication endpoint with auth token
     }
@@ -124,7 +129,6 @@ export class Heimdall{
      */
     async GetUserInfo(promise){
         this.enclaveFunction = "standard";
-        if(this.enclaveRequest.getUserInfoFirst == false) throw Error("getUserInfofirst must be set to true to use heimdall.GetUserInfo()")
         await this.redirectToOrk();
         const userData = await this.waitForSignal("userData");
         promise.fulfill(userData);
@@ -140,9 +144,9 @@ export class Heimdall{
         this.enclaveFunction = "standard";
         await this.redirectToOrk();
         let customModel = null;
-        if(this.enclaveRequest.getUserInfoFirst){
+        if(promise.callback != null){
             const userInfo = await this.waitForSignal("userData");
-            if(promise.callback != null) customModel = await promise.callback(userInfo); // putting await here in case implementor uses async
+            customModel = await promise.callback(userInfo); // putting await here in case implementor uses async
         }
         const completedData = await this.CompleteSignIn(customModel);
         promise.fulfill(completedData);
@@ -152,7 +156,7 @@ export class Heimdall{
      * TIDE BUTTON ACTION
      * @param {[string, FieldData, TidePromise]} params 
      */
-    async EncryptUserData([vuid, fieldData, promise]){ // Tide JWT is required!
+    async EncryptUserData([vuid, fieldData, promise]){ 
         try{
             this.enclaveFunction = "encrypt";
             // try opening an iframe in the current document first
@@ -274,16 +278,9 @@ export class Heimdall{
         return decryptedContent;
     }
 
-
-    async RetrieveUserInfo(){
-        if(this.enclaveRequest.getUserInfoFirst == true) return await this.waitForSignal("userData");
-        else if(this.enclaveRequest.getUserInfoFirst == false) return await this.waitForSignal("completed");
-        else throw Error("Did you define getUserInfoFirst in enclave request?");
-    }
-
     async OpenEnclave(){
         await this.redirectToOrk();
-        return await this.RetrieveUserInfo();
+        return await this.waitForSignal("userData");
     }
 
     // Signs the requested model / returns TideJWT + sig
@@ -471,6 +468,7 @@ export class TidePromise {
     }
 }
 
+// FieldData on Heimdall turns into Datum on enclave
 export class FieldData {
     /**
      * These identifiers must ALWAYS - EVERY TIME HEIMDALL IS CALLED FROM THIS VENDOR - be supplied in the SAME ORDER. APPEND list for new identifiers

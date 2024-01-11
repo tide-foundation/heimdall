@@ -29,16 +29,14 @@ const config = {
     homeORKUrl: "http://localhost:1001",
     vendorReturnAuthUrl: "http://localhost:6001?jwt=",
     enclaveRequest: {
-        getUserInfoFirst: false, // 1 step process - callback is redundant
         refreshToken: true, // I want a TideJWT returned
         customModel: undefined // I do not want to provide a customModel
     }
 }
 
 const heimdall = new Heimdall(config);
-const vendorCallback = () => null; // since getUserInfoFirst is false, a callback should just return null
-const tideButtonAction = async (callback) => heimdall.PerformTideAuth(callback); // describe what we want the tide button to do
-const tideButton = heimdall.AddTideButton(tideButtonAction, vendorCallback); // returns Tide Button for you to stylise
+const tideButtonAction = async () => heimdall.PerformTideAuth(); // describe what we want the tide button to do
+const tideButton = heimdall.AddTideButton(tideButtonAction); // returns Tide Button for you to stylise
 ```
 ### Basic Tide Button - Perform Tide Auth - 2 Step
 ```javascript
@@ -48,7 +46,6 @@ const config = {
     homeORKUrl: "http://localhost:1001",
     vendorReturnAuthUrl: "http://localhost:6001?jwt=",
     enclaveRequest: {
-        getUserInfoFirst: true, // 2 step process - we need to define a callback that returns a customModel
         refreshToken: true, // I want a TideJWT returned
         customModel: undefined // I do not want to provide a customModel - yet
     }
@@ -74,7 +71,6 @@ const config = {
     homeORKUrl: "http://localhost:1001",
     vendorReturnAuthUrl: "http://localhost:6001?jwt=",
     enclaveRequest: {
-        getUserInfoFirst: false, // 1 step process - we will not supply a customModel halfway through the process
         refreshToken: true, // I want a TideJWT returned
         customModel: undefined // I do not want to provide a customModel
     }
@@ -96,7 +92,6 @@ const config = {
     homeORKUrl: "http://localhost:1001",
     vendorReturnAuthUrl: "http://localhost:6001?jwt=",
     enclaveRequest: {
-        getUserInfoFirst: true, // 2 step process - we will supply a customModel halfway through the process through the function "vendorAction"
         refreshToken: true, // I want a TideJWT returned
         customModel: undefined // I do not want to provide a customModel - yet
     }
