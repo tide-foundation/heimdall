@@ -44,6 +44,7 @@ export class Heimdall{
         this.currentOrkURL = this.homeORKUrl;
         this.enclaveWindow = undefined;
         this.enclaveFunction = "standard";
+        this.enclaveType = "standard";
 
         let locationURL = new URL(window.location.href)
         this.heimdallPlatform = "";
@@ -79,10 +80,8 @@ export class Heimdall{
       
         //button styling
         button.textContent = "";
-        button.innerHTML='<img src ="https://tide.org/assets/images/logo-tide-white.png"/>';
+        button.innerHTML='<img height = "60" width = "130" src ="../TideLogo-White.png"/>';
         button.type="image";
-        button.style.width="200";
-        button.style.height="100";
         button.style.background="orange";
         button.style.color="white";
         button.style.fontSize="13px";
@@ -102,6 +101,7 @@ export class Heimdall{
      * @param {function} callback 
      */
     async PerformTideAuth(callback=null){
+        this.enclaveRequest.getUserInfoFirst = promise.callback == null ? false : true;
         await this.redirectToOrk();
 
         this.enclaveFunction = "standard";
@@ -128,6 +128,7 @@ export class Heimdall{
      * @param {TidePromise} promise 
      */
     async GetUserInfo(promise){
+        this.enclaveRequest.getUserInfoFirst = true;
         this.enclaveFunction = "standard";
         await this.redirectToOrk();
         const userData = await this.waitForSignal("userData");
@@ -141,6 +142,7 @@ export class Heimdall{
      * @param {TidePromise} promise
      */
     async GetCompleted(promise){
+        this.enclaveRequest.getUserInfoFirst = promise.callback == null ? false : true;
         this.enclaveFunction = "standard";
         await this.redirectToOrk();
         let customModel = null;
@@ -161,7 +163,7 @@ export class Heimdall{
             this.enclaveFunction = "encrypt";
             // try opening an iframe in the current document first
             // if that fails - for any reason (e.g. jwt expired, sessionkey not found, iframe blocked) - open the tide enclave
-            this.openHiddenIFrame();
+            await this.openHiddenIFrame(); // have to add await so the DOM on the iframe loads
 
             // send field data through window.postMessage so all of the vendor's super sensitive data isn't in the f***ing URL
             const dataToSend = {
@@ -175,107 +177,15 @@ export class Heimdall{
                 promise.fulfill(iFrameResp.encryptedFields); // in case iframe worked - fulfill promise with data
                 return;
             }
-
+            document.getElementById("tideEncryptIframe").remove(); // close iframe
             await this.redirectToOrk(); // in case iframe didn't work - let's pull up our sweet enclave
             this.sendMessage(dataToSend); // gotta send it again for the new window / enclave
             
             const enclaveResp = await this.waitForSignal("iframeData");
             promise.fulfill(enclaveResp.encryptedFields);
-        }catch{
-            promise.reject(error);
-        }
-        
-    }
-
-    /**
-     * TIDE BUTTON ACTION
-     * @param {[string, FieldData, TidePromise]} params 
-     */
-    async TESTencryptUserDataTEST([tideJWT, fieldData, promise]){
-        try{
-            if(!jwtValid(tideJWT)) throw Error("Invalid TideJWT")
-            const key = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
-            // encrypt each field with this key
-            // encrypted data will be in the same order as provided
-            const enc = new TextEncoder();
-            const datas = fieldData.getAll().map(a => enc.encode(JSON.stringify(a)));
-            const pre_encrypted = datas.map(async (data) => await this.TESTencryptDataTEST(data, key));
-            const encrypted = await Promise.all(pre_encrypted);
-            promise.fulfill(encrypted)
         }catch(error){
             promise.reject(error);
         }
-    }
-
-    /**
-     * @param {[string, Uint8Array[], TidePromise]} params 
-     */
-    async TESTdecryptUserDataTEST([tideJWT, encryptedData, promise]){
-        try{
-            if(!jwtValid(tideJWT)) throw Error("Invalid TideJWT")
-            const key = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
-            const pre_decrypted = encryptedData.map(async (enc) => await this.TESTdecryptDataTEST(enc, key));
-            const decrypted = await Promise.all(pre_decrypted);
-            
-            const decoder = new TextDecoder('utf-8');
-            const data = decrypted.map(dec => JSON.parse(decoder.decode(dec)));
-            promise.fulfill(data);
-
-        }catch(error){
-            promise.reject(error);
-        }
-    }
-
-    /**
-     * @param {Uint8Array} secretBytes 
-     * @param {Uint8Array} key 
-     * @returns 
-     */
-    async TESTencryptDataTEST(secretBytes, key) {
-        const AESKey = await window.crypto.subtle.importKey(
-            "raw",
-            key,
-            "AES-GCM",
-            true,
-            ["encrypt"]
-        );
-        const iv = window.crypto.getRandomValues(new Uint8Array(12));
-        const encryptedBuffer = await window.crypto.subtle.encrypt(
-            { name: "AES-GCM", iv: iv },
-            AESKey,
-            secretBytes
-          );
-        const len = iv.length + (new Uint8Array(encryptedBuffer)).length;
-        const buff = new Uint8Array(len);
-        buff.set(iv);
-        buff.set(new Uint8Array(encryptedBuffer), iv.length);
-        return buff;
-    }
-
-    /**
-     * @param {Uint8Array} encryptedBytes 
-     * @param {Uint8Array} key 
-     * @returns 
-     */
-    async TESTdecryptDataTEST(encryptedBytes, key){
-        const AESKey = await window.crypto.subtle.importKey(
-            "raw",
-            key,
-            "AES-GCM",
-            true,
-            ["decrypt"]
-        );
-        const iv = encryptedBytes.slice(0, 12);
-        const data = encryptedBytes.slice(12)
-        const decryptedContent = await window.crypto.subtle.decrypt(
-            {
-                name: "AES-GCM",
-                iv: iv,
-            },
-            AESKey,
-            data
-        );
-        return decryptedContent;
     }
 
     async OpenEnclave(){
@@ -299,20 +209,22 @@ export class Heimdall{
         this.sendMessage("VENDOR ERROR: Close Tide Enlcave");
     }
 
-    openHiddenIFrame(){
+    async openHiddenIFrame(){
+        this.enclaveType = "iframe";
         let iframe = document.createElement('iframe');
+        iframe.id = "tideEncryptIframe";
         iframe.style.display = "none";
         iframe.src = this.createOrkURL();
-        this.enclaveWindow = iframe.contentWindow;
-        /// set up error handling here in case iframe encounters error and needs enclave
         document.body.appendChild(iframe);
+        this.enclaveWindow = iframe.contentWindow;
+        return new Promise((resolve) => {
+            iframe.addEventListener('load', () => resolve());
+        })
     }
 
     async redirectToOrk(){
+        this.enclaveType = "standard";
         if(this.heimdallPlatform == "extension"){
-            /// TODO TODO TODO
-            // I'm 99% sure that if a user does ork rehoming while using heimdall through a extension - it will break due to the listener/port being created at the start. Fix ASAP
-            // opening ork for first time
             const openEnclavePromise = new Promise((resolve) => {
                 const handler = (port) => {
                     if(port.sender.origin !== this.currentOrkURL) chrome.runtime.onConnectExternal.removeListener(handler); // someone else connected to us
@@ -332,6 +244,9 @@ export class Heimdall{
             await openEnclavePromise;
         }else{
             this.enclaveWindow = window.open(this.createOrkURL(), new Date().getTime(), 'width=800,height=800');
+            if(this.enclaveType == "standard" && (this.enclaveFunction == "encrypt" || this.enclaveFunction == "decrypt")){
+                await this.waitForSignal("pageLoaded"); // we need to wait for the page to load before we send sensitive data
+            }
         }
     }
 
@@ -346,6 +261,7 @@ export class Heimdall{
         +
         `&vendorLocationSig=${encodeURIComponent(this.vendorLocationSignature)}` +
         `&enclaveRequest=${encodeURIComponent(JSON.stringify(this.enclaveRequest))}` +
+        `&enclaveType=${this.enclaveType}` +
         `&enclaveFunction=${this.enclaveFunction}` +
         `&vendorOrks=0`;
     }
@@ -438,6 +354,10 @@ export class Heimdall{
                     responseType: "iframeData",
                     errorEncountered: enclaveResponse.errorEncountered,
                     encryptedFields: enclaveResponse.encryptedFields
+                }
+            case "pageLoaded":
+                return {
+                    responseType: "pageLoaded"
                 }
             default:
                 throw Error("Unknown data type returned from enclave");
