@@ -181,7 +181,7 @@ export class Heimdall{
             await this.redirectToOrk(); // in case iframe didn't work - let's pull up our sweet enclave
             this.sendMessage(dataToSend); // gotta send it again for the new window / enclave
             
-            const enclaveResp = await this.waitForSignal("iframeData");
+            const enclaveResp = await this.waitForSignal("serializedFields");
             promise.fulfill(enclaveResp.encryptedFields);
         }catch(error){
             promise.reject(error);
@@ -358,6 +358,11 @@ export class Heimdall{
             case "pageLoaded":
                 return {
                     responseType: "pageLoaded"
+                }
+            case "serializedFields":
+                return {
+                    responseType: "serializedFields",
+                    encryptedFields: enclaveResponse.encryptedFields
                 }
             default:
                 throw Error("Unknown data type returned from enclave");
