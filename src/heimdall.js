@@ -172,7 +172,7 @@ export class Heimdall{
             }
             this.sendMessage(dataToSend);
 
-            const iFrameResp = await this.waitForSignal('iframeData');
+            const iFrameResp = await this.waitForSignal('encrypt');
             if(iFrameResp.errorEncountered == false) {
                 promise.fulfill(iFrameResp.encryptedFields); // in case iframe worked - fulfill promise with data
                 return;
@@ -181,7 +181,7 @@ export class Heimdall{
             await this.redirectToOrk(); // in case iframe didn't work - let's pull up our sweet enclave
             this.sendMessage(dataToSend); // gotta send it again for the new window / enclave
             
-            const enclaveResp = await this.waitForSignal("serializedFields");
+            const enclaveResp = await this.waitForSignal("encrypt");
             promise.fulfill(enclaveResp.encryptedFields);
         }catch(error){
             promise.reject(error);
@@ -344,25 +344,20 @@ export class Heimdall{
                     ModelSig: enclaveResponse.modelSig,
                     TideJWT: enclaveResponse.TideJWT
                 }
+            case "encrypt":
+                return {
+                    responseType: "encrypt",
+                    errorEncountered: enclaveResponse.errorEncountered,
+                    encryptedFields: enclaveResponse.encryptedFields
+                }
             case "newORKUrl":
                 this.currentOrkURL = enclaveResponse.url;
                 return {
                     responseType: "newORKUrl"
                 }
-            case "iframeData":
-                return {
-                    responseType: "iframeData",
-                    errorEncountered: enclaveResponse.errorEncountered,
-                    encryptedFields: enclaveResponse.encryptedFields
-                }
             case "pageLoaded":
                 return {
                     responseType: "pageLoaded"
-                }
-            case "serializedFields":
-                return {
-                    responseType: "serializedFields",
-                    encryptedFields: enclaveResponse.encryptedFields
                 }
             default:
                 throw Error("Unknown data type returned from enclave");
