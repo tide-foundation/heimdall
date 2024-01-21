@@ -188,6 +188,40 @@ export class Heimdall{
         }
     }
 
+    /**
+     * TIDE BUTTON ACTION
+     * @param {[string, Uint8Array[], TidePromise]} params 
+     */
+    async DecryptUserData([vuid, serializedFields, promise]){
+        try{
+            this.enclaveFunction = "decrypt";
+            // try opening an iframe in the current document first
+            // if that fails - for any reason (e.g. jwt expired, sessionkey not found, iframe blocked) - open the tide enclave
+            await this.openHiddenIFrame(); // have to add await so the DOM on the iframe loads
+
+            const dataToSend = {
+                VUID: vuid,
+                SerializedFields: serializedFields
+            }
+            this.sendMessage(dataToSend);
+
+            const iFrameResp = await this.waitForSignal('decrypt');
+            if(iFrameResp.errorEncountered == false) {
+                promise.fulfill(iFrameResp.decryptedFields); // in case iframe worked - fulfill promise with data
+                return;
+            }
+
+            document.getElementById("tideEncryptIframe").remove(); // close iframe
+            await this.redirectToOrk(); // in case iframe didn't work - let's pull up our sweet enclave
+            this.sendMessage(dataToSend); // gotta send it again for the new window / enclave
+            
+            const enclaveResp = await this.waitForSignal("decrypt");
+            promise.fulfill(enclaveResp.decryptedFields);
+        }catch(err){
+            promise.reject(err);
+        }
+    }
+
     async OpenEnclave(){
         await this.redirectToOrk();
         return await this.waitForSignal("userData");
@@ -349,6 +383,12 @@ export class Heimdall{
                     responseType: "encrypt",
                     errorEncountered: enclaveResponse.errorEncountered,
                     encryptedFields: enclaveResponse.encryptedFields
+                }
+            case "decrypt":
+                return {
+                    responseType: "decrypt",
+                    errorEncountered: enclaveResponse.errorEncountered,
+                    decryptedFields: enclaveResponse.decryptedFields
                 }
             case "newORKUrl":
                 this.currentOrkURL = enclaveResponse.url;
