@@ -80,7 +80,7 @@ export class Heimdall{
       
         //button styling
         button.textContent = "";
-        button.innerHTML='<img height = "60" width = "130" src ="../TideLogo-White.png"/>';
+        button.innerHTML='<img src ="https://tide.org/assets/images/logo-tide-white.png"/>';
         button.type="image";
         button.style.background="orange";
         button.style.color="white";
