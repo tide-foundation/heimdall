@@ -5,7 +5,7 @@
         <p>Vendor HTML page</p>
 
     <script type="module">
-        import {Heimdall, TidePromise} from './src/heimdall.js';
+        import {Heimdall, TidePromise, FieldData} from './src/heimdall.js';
         const config = {
             vendorPublic: "+g/dDdxLqJMOLpJMZ3WIiJ1PEe/12bNhDoIBFmAvgR8=",
             vendorLocationSignature: "0dYi2k4V8Qa5BfKkNSkqcCGQ4d1BIJm6+A5Pwl8DNbZcxQljPnbNk0KG5FTkWjDTbckKHSG7xi1xuzb38uy3Bg==",
@@ -23,14 +23,49 @@
         const tidePromise = new TidePromise();
 
         const tideButtonAction = async (promise) => {
-            return heimdall.GetCompleted(promise);
+            return heimdall.GetUserInfo(promise);
         }
 
         const tideButton = heimdall.AddTideButton(tideButtonAction, tidePromise);
         const resolvedData = await tidePromise.promise;
-        //console.log(resolvedData.ModelSig) 
-        console.log(resolvedData.TideJWT)
+        console.log(resolvedData.UID)
 
+        // i need the uid
+        const enc = new TextEncoder();
+        const dec = new TextDecoder();
+
+        // time to encrypt some data
+        // create fieldData
+        const encryptPromise = new TidePromise();
+        const idList = ["password", "username"]
+        const fieldData = new FieldData(idList);
+        fieldData.add(enc.encode("test to encrypt"), ["password"]);
+
+        const ac2 = async(params) => {
+            return await heimdall.EncryptUserData(params);
+        }
+        const params = [resolvedData.UID, fieldData, encryptPromise];
+        const tBtn2 = heimdall.AddTideButton(ac2, params);
+        tBtn2.style.background = "blue";
+        
+        const serializedFields = await encryptPromise.promise;
+
+        console.log(serializedFields);
+
+        const decryptPromise = new TidePromise();
+        const ac3 = async(params) => {
+            return await heimdall.DecryptUserData(params);
+        }
+        const params2 = [resolvedData.UID, serializedFields, decryptPromise];
+        const tBtn3 = heimdall.AddTideButton(ac3, params2);
+        tBtn3.style.background = "purple";
+
+        const decrypted = await decryptPromise.promise;
+        const fieldData2 = new FieldData(idList);
+        fieldData2.addManyWithTag(decrypted);
+        const fdIds = fieldData2.getAllWithIds();
+        console.log(fdIds);
+        console.log(dec.decode(fdIds[0].Data));
     </script>  
     <!--script type="module">
         import {Heimdall, TidePromise, FieldData} from './heimdall.js';
