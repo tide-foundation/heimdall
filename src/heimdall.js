@@ -174,7 +174,7 @@ export class Heimdall{
 
             const iFrameResp = await this.waitForSignal('encrypt');
             if(iFrameResp.errorEncountered == false) {
-                promise.fulfill(iFrameResp.encryptedFields); // in case iframe worked - fulfill promise with data
+                promise.fulfill(iFrameResp.encryptedFields.map(ef => deserializeUint8Array(ef))); // in case iframe worked - fulfill promise with data
                 return;
             }
             document.getElementById("tideEncryptIframe").remove(); // close iframe
@@ -182,7 +182,7 @@ export class Heimdall{
             this.sendMessage(dataToSend); // gotta send it again for the new window / enclave
             
             const enclaveResp = await this.waitForSignal("encrypt");
-            promise.fulfill(enclaveResp.encryptedFields);
+            promise.fulfill(enclaveResp.encryptedFields.map(ef => deserializeUint8Array(ef)));
         }catch(error){
             promise.reject(error);
         }
@@ -201,7 +201,7 @@ export class Heimdall{
 
             const dataToSend = {
                 VUID: vuid,
-                SerializedFields: serializedFields
+                SerializedFields: serializedFields.map(sf => serializeUint8Array(sf))
             }
             this.sendMessage(dataToSend);
 
@@ -251,9 +251,24 @@ export class Heimdall{
         iframe.src = this.createOrkURL();
         document.body.appendChild(iframe);
         this.enclaveWindow = iframe.contentWindow;
-        return new Promise((resolve) => {
-            iframe.addEventListener('load', () => resolve());
-        })
+
+        if(this.heimdallPlatform == "extension"){
+            // If its an extension using an iframe - we need to await the connect to establish before we continue
+            const openEnclavePromise = new Promise((resolve) => {
+                const handler = (port) => {
+                    if(port.sender.origin !== this.currentOrkURL) chrome.runtime.onConnectExternal.removeListener(handler); // someone else connected to us
+                    else this.extensionPort = port; // we connected to the right ork
+                    resolve("done");
+                }
+                chrome.runtime.onConnectExternal.addListener(handler);
+            });
+            return openEnclavePromise;
+        }else{
+            // If its anything else, we need to await just the page loading
+            return new Promise((resolve) => {
+                iframe.addEventListener('load', () => resolve());
+            })
+        }
     }
 
     async redirectToOrk(){
@@ -446,11 +461,8 @@ export class FieldData {
      * @param {string[]} ids 
      */
     add(data, ids){
-        let datum = {
-            Data: data,
-            Tag: this.getTag(ids)
-        }
-        this.datas.push(datum);
+        const tag = this.getTag(ids);
+        this.addWithTag(data, tag);
     }
 
     /**
@@ -459,7 +471,7 @@ export class FieldData {
      */
     addWithTag(data, tag){
         let datum = {
-            Data: data,
+            Data: serializeUint8Array(data),
             Tag: tag
         }
         this.datas.push(datum);
@@ -472,7 +484,10 @@ export class FieldData {
         if(this.datas.length > 0) throw Error("This FieldData object already has objects in its contents");
         this.datas = fieldDatas.map(fd => {
             if(!fd.Data || !fd.Tag) throw Error("Invalid field data supplied");
-            return fd;
+            return {
+                Data: deserializeUint8Array(fd.Data),
+                Tag: fd.Tag
+            };
         })
     }
 
@@ -521,7 +536,18 @@ export class FieldData {
     }
 }
 
-
+function deserializeUint8Array(base64String) {
+    const binaryString = atob(base64String);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+}
+function serializeUint8Array(uint8Array) {
+    return btoa(String.fromCharCode.apply(null, uint8Array));
+}
 
 function jwtValid(jwt){
     const decoded = jwt.split(".")
