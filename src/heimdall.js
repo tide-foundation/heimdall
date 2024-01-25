@@ -182,7 +182,8 @@ export class Heimdall{
             this.sendMessage(dataToSend); // gotta send it again for the new window / enclave
             
             const enclaveResp = await this.waitForSignal("encrypt");
-            promise.fulfill(enclaveResp.encryptedFields.map(ef => deserializeUint8Array(ef)));
+            const s = enclaveResp.encryptedFields.map(ef => deserializeUint8Array(ef));
+            promise.fulfill(s);
         }catch(error){
             promise.reject(error);
         }
