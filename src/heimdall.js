@@ -36,10 +36,6 @@ export class Heimdall{
         this.homeORKUrl = config.homeORKUrl;
         this.enclaveRequest = config.enclaveRequest;
         this.vendorReturnAuthUrl = config.vendorReturnAuthUrl;
-        // check enclave request for invalid values
-        if(this.enclaveRequest.refreshToken == false && this.enclaveRequest.customModel == undefined){
-            throw Error("It seems you are trying to log a user into Tide and expect nothing in return. Make sure you at least use the sign in process for something.")
-        }
 
         this.currentOrkURL = this.homeORKUrl;
         this.enclaveWindow = undefined;
@@ -291,11 +287,11 @@ export class Heimdall{
                 height: 800  // Specify the desired height in pixels
             });
 
-            await openEnclavePromise;
+            return await openEnclavePromise;
         }else{
             this.enclaveWindow = window.open(this.createOrkURL(), new Date().getTime(), 'width=800,height=800');
             if(this.enclaveType == "standard" && (this.enclaveFunction == "encrypt" || this.enclaveFunction == "decrypt")){
-                await this.waitForSignal("pageLoaded"); // we need to wait for the page to load before we send sensitive data
+                return await this.waitForSignal("pageLoaded"); // we need to wait for the page to load before we send sensitive data
             }
         }
     }
