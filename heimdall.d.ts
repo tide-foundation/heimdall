@@ -36,3 +36,10 @@ export class TidePromise{
     promise: Promise;
     fulfill(value: any): void
 }
+
+export class FieldData{
+    constructor(identifiers: string[]);
+    add(data: string, ids: string[]);
+    addManyWithTag(fieldDatas: object[]);
+    getAllWithIds(): object[];
+}

@@ -1,8 +1,8 @@
 {
   "name": "heimdall-tide",
-  "version": "0.0.40",
+  "version": "0.0.60",
   "description": "Allows for Integration with Tide",
-  "main": "heimdall.js",
+  "main": "./src/heimdall.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -19,5 +19,10 @@
   "bugs": {
     "url": "https://github.com/tide-foundation/heimdall/issues"
   },
-  "homepage": "https://github.com/tide-foundation/heimdall#readme"
+  "homepage": "https://github.com/tide-foundation/heimdall#readme",
+  "devDependencies": {
+    "@babel/cli": "^7.23.4",
+    "@babel/core": "^7.23.5",
+    "@babel/preset-env": "^7.23.5"
+  }
 }
