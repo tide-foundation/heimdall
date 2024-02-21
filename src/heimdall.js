@@ -49,14 +49,6 @@ export class Heimdall{
             this.vendorLocationSignature = config.vendorLocationSignature;
             this.heimdallPlatform = "website";
             this.vendorLocation = window.location.origin;
-        } 
-        else if(locationURL.protocol === "chrome-extension:"){
-            if (!Object.hasOwn(config, 'vendorLocationSignature')) { throw Error("No vendor url sig has been included in config") }
-            this.vendorLocationSignature = config.vendorLocationSignature;
-            this.heimdallPlatform = "extension";
-            if((typeof chrome === "undefined" || !chrome.runtime)) throw Error("Heimdall is being run in a chrome extension without access to chrome runtime");
-            this.vendorLocation = chrome.runtime.id;
-            this.extensionPort = undefined;
         }
         else{
             throw Error("Heimdall is not supported in whatever application you are using");
@@ -240,51 +232,20 @@ export class Heimdall{
         document.body.appendChild(iframe);
         this.enclaveWindow = iframe.contentWindow;
 
-        if(this.heimdallPlatform == "extension"){
-            // If its an extension using an iframe - we need to await the connect to establish before we continue
-            const openEnclavePromise = new Promise((resolve) => {
-                const handler = (port) => {
-                    if(port.sender.origin !== this.currentOrkURL) chrome.runtime.onConnectExternal.removeListener(handler); // someone else connected to us
-                    else this.extensionPort = port; // we connected to the right ork
-                    resolve("done");
-                }
-                chrome.runtime.onConnectExternal.addListener(handler);
-            });
-            return openEnclavePromise;
-        }else{
-            // If its anything else, we need to await just the page loading
-            return new Promise((resolve) => {
-                iframe.addEventListener('load', () => resolve());
-            })
-        }
+        // we need to await just the page loading
+        return new Promise((resolve) => {
+            iframe.addEventListener('load', () => resolve());
+        })
+        
     }
 
     async redirectToOrk(){
         this.enclaveType = "standard";
-        if(this.heimdallPlatform == "extension"){
-            const openEnclavePromise = new Promise((resolve) => {
-                const handler = (port) => {
-                    if(port.sender.origin !== this.currentOrkURL) chrome.runtime.onConnectExternal.removeListener(handler); // someone else connected to us
-                    else this.extensionPort = port; // we connected to the right ork
-                    resolve("done");
-                }
-                chrome.runtime.onConnectExternal.addListener(handler);
-            });
-
-            // open enclave here
-            chrome.windows.create({ 
-                url: this.createOrkURL(),
-                width: 800,  // Specify the desired width in pixels
-                height: 800  // Specify the desired height in pixels
-            });
-
-            return await openEnclavePromise;
-        }else{
-            this.enclaveWindow = window.open(this.createOrkURL(), new Date().getTime(), 'width=800,height=800');
-            if(this.enclaveType == "standard" && (this.enclaveFunction == "encrypt" || this.enclaveFunction == "decrypt")){
-                return await this.waitForSignal("pageLoaded"); // we need to wait for the page to load before we send sensitive data
-            }
+        this.enclaveWindow = window.open(this.createOrkURL(), new Date().getTime(), 'width=800,height=800');
+        if(this.enclaveType == "standard" && (this.enclaveFunction == "encrypt" || this.enclaveFunction == "decrypt")){
+            return await this.waitForSignal("pageLoaded"); // we need to wait for the page to load before we send sensitive data
         }
+        
     }
 
     createOrkURL(){
@@ -300,49 +261,21 @@ export class Heimdall{
     }
 
     waitForSignal(responseTypeToAwait) {
-        if(this.heimdallPlatform == "extension"){
-            if(this.extensionPort == undefined){
-                // we haven't connected to the enclave yet
-                throw Error("Must open enclave before calling waitForSignal() as an extension");
-            }
-            return new Promise((resolve) => {
-                const handler = (msg) => {
-                    const response = this.processEvent(msg, this.currentOrkURL); // i pass currentORKUrl here as we know previously we connected to the right ork (in redirectToOrk())
-                    if(response.responseType === responseTypeToAwait){
-                        this.extensionPort.onMessage.removeListener(handler);
-                        resolve(response);
-                    } 
-                }
-                this.extensionPort.onMessage.addListener(handler);
-            });
-            
-        }else{
-            return new Promise((resolve) => {
-                const handler = (event) => {
-                    const response = this.processEvent(event.data, event.origin);
-                    if(response.responseType === responseTypeToAwait){
-                        resolve(response);
-                        window.removeEventListener("message", handler);
-                    }  
-                };
-                window.addEventListener("message", handler, false);
-            });
-        }
+        return new Promise((resolve) => {
+            const handler = (event) => {
+                const response = this.processEvent(event.data, event.origin);
+                if(response.responseType === responseTypeToAwait){
+                    resolve(response);
+                    window.removeEventListener("message", handler);
+                }  
+            };
+            window.addEventListener("message", handler, false);
+        });
+        
     }
 
     sendMessage(message){
-        if(this.heimdallPlatform == "extension"){
-            if(this.extensionPort == undefined){
-                // we haven't connected to the enclave yet
-                throw Error("Must open enclave before calling sendMessage() as an extension");
-            }
-            else{
-                this.extensionPort.postMessage(message);
-            }
-        }
-        else{
-            this.enclaveWindow.postMessage(message, this.currentOrkURL);
-        }
+        this.enclaveWindow.postMessage(message, this.currentOrkURL);
     }
 
     /**
