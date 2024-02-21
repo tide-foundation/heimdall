@@ -169,11 +169,11 @@ export class Heimdall{
             this.sendMessage(dataToSend);
 
             const iFrameResp = await this.waitForSignal('encrypt');
+            document.getElementById("tideEncryptIframe").remove(); // close iframe
             if(iFrameResp.errorEncountered == false) {
                 promise.fulfill(iFrameResp.encryptedFields.map(ef => deserializeUint8Array(ef))); // in case iframe worked - fulfill promise with data
                 return;
             }
-            document.getElementById("tideEncryptIframe").remove(); // close iframe
             await this.redirectToOrk(); // in case iframe didn't work - let's pull up our sweet enclave
             this.sendMessage(dataToSend); // gotta send it again for the new window / enclave
             
@@ -203,12 +203,11 @@ export class Heimdall{
             this.sendMessage(dataToSend);
 
             const iFrameResp = await this.waitForSignal('decrypt');
+            document.getElementById("tideEncryptIframe").remove(); // close iframe
             if(iFrameResp.errorEncountered == false) {
                 promise.fulfill(iFrameResp.decryptedFields); // in case iframe worked - fulfill promise with data
                 return;
             }
-
-            document.getElementById("tideEncryptIframe").remove(); // close iframe
             await this.redirectToOrk(); // in case iframe didn't work - let's pull up our sweet enclave
             this.sendMessage(dataToSend); // gotta send it again for the new window / enclave
             
