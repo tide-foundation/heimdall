@@ -58,14 +58,6 @@ export class Heimdall{
             this.vendorLocation = chrome.runtime.id;
             this.extensionPort = undefined;
         }
-        else if(locationURL.protocol === "file:"){
-            this.heimdallPlatform = "app";
-            if (!Object.hasOwn(config, 'appOriginText')) { throw Error("No appOriginText has been included in config. Since you are running an app with Heimdall, appOriginText is required") } 
-            if (!Object.hasOwn(config, 'appOriginTextSignature')) { throw Error("No appOriginTextSignature has been included in config. Since you are running an app with Heimdall, appOriginTextSignature is required") } 
-            this.appOriginText = config.appOriginText;
-            this.appOriginTextSignature = config.appOriginTextSignature;
-            this.vendorLocation = window.location.href; // this isn't going to be used in any meaningful way
-        }
         else{
             throw Error("Heimdall is not supported in whatever application you are using");
         }
@@ -300,10 +292,6 @@ export class Heimdall{
         `?vendorPublic=${encodeURIComponent(this.vendorPublic)}` +
         `&vendorPlatform=${encodeURIComponent(this.heimdallPlatform)}` +
         `&vendorLocation=${encodeURIComponent(this.vendorLocation)}` +
-        (this.heimdallPlatform === "app" 
-        ? `&vendorOriginText=${encodeURIComponent(this.appOriginText)}&vendorOriginTextSig=${encodeURIComponent(this.appOriginTextSignature)}` 
-        : `&vendorLocationSig=${encodeURIComponent(this.vendorLocationSignature)}`)
-        +
         `&vendorLocationSig=${encodeURIComponent(this.vendorLocationSignature)}` +
         `&enclaveRequest=${encodeURIComponent(JSON.stringify(this.enclaveRequest))}` +
         `&enclaveType=${this.enclaveType}` +
