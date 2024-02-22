@@ -42,7 +42,7 @@ export class Heimdall{
         this.vendorPublic = config.vendorPublic;
         this.vendorRotatingPublic = config.vendorRotatingPublic;
         this.homeORKUrl = config.homeORKUrl;
-        this.enclaveRequest = config.enclaveRequest;
+        this.enclaveData = {}; // don't get from config for CIAM scenario
         this.BiFrostPublicKey = Object.hasOwn(config, 'BiFrostPublicKey') ? config.BiFrostPublicKey : "";
         this.vendorRotatingPublicSignature = config.vendorRotatingPublicSignature;
 
@@ -80,6 +80,95 @@ export class Heimdall{
         document.body.appendChild(button); // add button to page
         return button;
     }
+    /**
+     * TIDE BUTTON ACTION
+     * @param {TidePromise} promise
+     */
+    async GetCompleted(promise){
+        throw Error("DO NOT USE. Experimental function");
+        this.enclaveData.getUserInfoFirst = promise.callback == null ? false : true;
+        this.enclaveFunction = "standard";
+        await this.redirectToOrk();
+        let customModel = null;
+        if(promise.callback != null){
+            const userInfo = await this.waitForSignal("userData");
+            customModel = await promise.callback(userInfo); // putting await here in case implementor uses async
+        }
+        const pre_resp = this.waitForSignal("completed");
+        this.sendMessage(customModel);
+        const resp = await pre_resp;
+        promise.fulfill(resp);
+    }
+
+    /**
+     * TIDE BUTTON ACTION
+     * @param {[string, FieldData, TidePromise]} params 
+     */
+    async EncryptUserData([vuid, fieldData, promise]){ 
+        throw Error("DO NOT USE. Experimental function");
+        try{
+            this.enclaveFunction = "encrypt";
+            // try opening an iframe in the current document first
+            // if that fails - for any reason (e.g. jwt expired, sessionkey not found, iframe blocked) - open the tide enclave
+            await this.openHiddenIFrame(); // have to add await so the DOM on the iframe loads
+
+            // send field data through window.postMessage so all of the vendor's super sensitive data isn't in the f***ing URL
+            const dataToSend = {
+                VUID: vuid,
+                FieldData: fieldData.getAll()
+            }
+            this.sendMessage(dataToSend);
+
+            const iFrameResp = await this.waitForSignal('encrypt');
+            document.getElementById("tideEncryptIframe").remove(); // close iframe
+            if(iFrameResp.errorEncountered == false) {
+                promise.fulfill(iFrameResp.encryptedFields.map(ef => deserializeUint8Array(ef))); // in case iframe worked - fulfill promise with data
+                return;
+            }
+            await this.redirectToOrk(); // in case iframe didn't work - let's pull up our sweet enclave
+            this.sendMessage(dataToSend); // gotta send it again for the new window / enclave
+            
+            const enclaveResp = await this.waitForSignal("encrypt");
+            const s = enclaveResp.encryptedFields.map(ef => deserializeUint8Array(ef));
+            promise.fulfill(s);
+        }catch(error){
+            promise.reject(error);
+        }
+    }
+
+    /**
+     * TIDE BUTTON ACTION
+     * @param {[string, Uint8Array[], TidePromise]} params 
+     */
+    async DecryptUserData([vuid, serializedFields, promise]){
+        throw Error("DO NOT USE. Experimental function");
+        try{
+            this.enclaveFunction = "decrypt";
+            // try opening an iframe in the current document first
+            // if that fails - for any reason (e.g. jwt expired, sessionkey not found, iframe blocked) - open the tide enclave
+            await this.openHiddenIFrame(); // have to add await so the DOM on the iframe loads
+
+            const dataToSend = {
+                VUID: vuid,
+                SerializedFields: serializedFields.map(sf => serializeUint8Array(sf))
+            }
+            this.sendMessage(dataToSend);
+
+            const iFrameResp = await this.waitForSignal('decrypt');
+            document.getElementById("tideEncryptIframe").remove(); // close iframe
+            if(iFrameResp.errorEncountered == false) {
+                promise.fulfill(iFrameResp.decryptedFields); // in case iframe worked - fulfill promise with data
+                return;
+            }
+            await this.redirectToOrk(); // in case iframe didn't work - let's pull up our sweet enclave
+            this.sendMessage(dataToSend); // gotta send it again for the new window / enclave
+            
+            const enclaveResp = await this.waitForSignal("decrypt");
+            promise.fulfill(enclaveResp.decryptedFields);
+        }catch(err){
+            promise.reject(err);
+        }
+    }
 
     /**
      * TIDE BUTTON ACTION
@@ -87,7 +176,13 @@ export class Heimdall{
      */
     async PerformTAGFlow(promise){
         try{
-            this.enclaveRequest.getUserInfoFirst = false;
+            this.enclaveData = {
+                getUserInfoFirst: false,
+                gVVK: this.vendorPublic,
+                gVRK: this.vendorRotatingPublic,
+                gVRKSig: this.vendorRotatingPublicSignature,
+                gBFK: this.BiFrostPublicKey
+            };
             this.enclaveFunction = "TAG";
             await this.redirectToOrk();
 
@@ -147,12 +242,9 @@ export class Heimdall{
 
     createOrkURL(){
         return this.currentOrkURL + 
-        `?gVVK=${encodeURIComponent(this.vendorPublic)}` +
-        `&gVRK=${encodeURIComponent(this.vendorRotatingPublic)}` +
-        `&gVRKSig=${encodeURIComponent(this.vendorRotatingPublicSignature)}` +
-        `&gBFK=${encodeURIComponent(this.BiFrostPublicKey)}` +
+        `?vendorLocation=${encodeURIComponent(this.vendorLocation)}` +
         `&vendorPlatform=${encodeURIComponent(this.heimdallPlatform)}` +
-        `&enclaveRequest=${encodeURIComponent(JSON.stringify(this.enclaveRequest))}` +
+        `&enclaveData=${encodeURIComponent(JSON.stringify(this.enclaveData))}` +
         `&enclaveType=${this.enclaveType}` +
         `&enclaveFunction=${this.enclaveFunction}` +
         `&vendorOrks=0`;
@@ -197,6 +289,19 @@ export class Heimdall{
                     responseType: "tag",
                     DataForTAG: enclaveResponse.DataForTAG,
                     NewAccount: enclaveResponse.newAccount
+                }
+            case "userData":
+                return {
+                    responseType: "userData",
+                    PublicKey: enclaveResponse.publicKey,
+                    UID: enclaveResponse.uid,
+                    NewAccount: enclaveResponse.newAccount
+                }
+            case "completed":                
+                return {
+                    responseType: "completed",
+                    ModelSig: enclaveResponse.modelSig,
+                    TideJWT: enclaveResponse.TideJWT // this will probs change
                 }
             case "encrypt":
                 return {
