@@ -15,6 +15,11 @@
 // If not, see https://tide.org/licenses_tcoc2-0-0-en
 //
 
+import { POST } from "./extras/HTTPRequest.js"
+import { FieldData } from "./extras/FieldData.js"
+import { deserializeUint8Array, serializeUint8Array, jwtValid } from "./extras/Utils.js"
+import { TidePromise } from "./extras/TidePromise.js"
+
 export class Heimdall{
     /**
      * 
@@ -29,24 +34,24 @@ export class Heimdall{
      */
     constructor(config){
         if (!Object.hasOwn(config, 'vendorPublic')) { throw Error("No vendor public key has been included in config") }
+        if (!Object.hasOwn(config, 'vendorRotatingPublic')) { throw Error("No vendor rotating public key has been included in config") }
         if (!Object.hasOwn(config, 'homeORKUrl')) { throw Error("No home ork URL has been included in config") }
+        if (!Object.hasOwn(config, 'vendorRotatingPublicSignature')) { throw Error("No vendor rotating public sig has been included in config") }
         if (!Object.hasOwn(config, 'enclaveRequest')) { throw Error("No enclave request has been included in config") }
 
         this.vendorPublic = config.vendorPublic;
+        this.vendorRotatingPublic = config.vendorRotatingPublic;
         this.homeORKUrl = config.homeORKUrl;
         this.enclaveRequest = config.enclaveRequest;
-        this.vendorReturnAuthUrl = config.vendorReturnAuthUrl;
+        this.BiFrostPublicKey = Object.hasOwn(config, 'BiFrostPublicKey') ? config.BiFrostPublicKey : "";
+        this.vendorRotatingPublicSignature = config.vendorRotatingPublicSignature;
 
         this.currentOrkURL = this.homeORKUrl;
         this.enclaveWindow = undefined;
-        this.enclaveFunction = "standard";
-        this.enclaveType = "standard";
 
         let locationURL = new URL(window.location.href)
         this.heimdallPlatform = "";
         if(locationURL.protocol === "http:" || locationURL.protocol === "https:"){
-            if (!Object.hasOwn(config, 'vendorLocationSignature')) { throw Error("No vendor url sig has been included in config") }
-            this.vendorLocationSignature = config.vendorLocationSignature;
             this.heimdallPlatform = "website";
             this.vendorLocation = window.location.origin;
         }
@@ -78,60 +83,35 @@ export class Heimdall{
 
     /**
      * TIDE BUTTON ACTION
-     * @param {function} callback 
-     */
-    async PerformTideAuth(callback=null){
-        this.enclaveRequest.getUserInfoFirst = promise.callback == null ? false : true;
-        await this.redirectToOrk();
-
-        this.enclaveFunction = "standard";
-        if(typeof(this.vendorReturnAuthUrl) !== "string") throw Error("Vendor's Return Auth URL has not been defined in config.enclaveRequest")
-
-        let jwt = undefined;
-        if(callback == null){
-            // expect completed
-            const userInfo = await this.waitForSignal("completed");
-            jwt = userInfo.TideJWT;
-        }else{
-            // expect userData
-            const userInfo = await this.waitForSignal("userData");
-            callback(userInfo); // this can be used for the vendor page to perform operations before user signs in/up to tide
-            jwt = await this.CompleteSignIn(null).TideJWT; // null for customModel as no signedModel will be returned
-        }
-
-        if(typeof(jwt) !== "string") throw Error("PerformTideAuth function requires a RefreshToken (TideJWT) to be requested in the config");
-        window.location.replace(this.vendorReturnAuthUrl + jwt); // redirect user to this vendor's authentication endpoint with auth token
-    }
-
-    /**
-     * TIDE BUTTON ACTION
-     * @param {TidePromise} promise 
-     */
-    async GetUserInfo(promise){
-        this.enclaveRequest.getUserInfoFirst = true;
-        this.enclaveFunction = "standard";
-        await this.redirectToOrk();
-        const userData = await this.waitForSignal("userData");
-        promise.fulfill(userData);
-        // continue sign in so vendor doesn't have to do it (i can't think of why vendor would abort this process, if something screws up, it's on the vendor, they already paid for the user)
-        await this.CompleteSignIn();
-    }
-
-    /**
-     * TIDE BUTTON ACTION
      * @param {TidePromise} promise
      */
-    async GetCompleted(promise){
-        this.enclaveRequest.getUserInfoFirst = promise.callback == null ? false : true;
-        this.enclaveFunction = "standard";
-        await this.redirectToOrk();
-        let customModel = null;
-        if(promise.callback != null){
-            const userInfo = await this.waitForSignal("userData");
-            customModel = await promise.callback(userInfo); // putting await here in case implementor uses async
+    async PerformTAGFlow(promise){
+        try{
+            this.enclaveRequest.getUserInfoFirst = false;
+            this.enclaveFunction = "TAG";
+            await this.redirectToOrk();
+
+            const TAGdata = await this.waitForSignal("tag");
+
+            // send to TAG endpoint /validate, receive TAG Commit data
+            const TAGJsonData = JSON.parse(TAGdata.DataForTAG);
+
+            if(!Object.hasOwn(TAGJsonData, 'VendorEncryptedData')
+            || !Object.hasOwn(TAGJsonData, 'BiFrostEncryptedData')
+            || !Object.hasOwn(TAGJsonData, 'JWT_unsigned')) throw Error("TAGData from enclave does not include all neccessary fields");
+
+            const TAGCommitResponse = await POST('/tide/validate', {
+                VendorEncryptedData: TAGJsonData.VendorEncryptedData,
+                BiFrostEncryptedData: TAGJsonData.BiFrostEncryptedData,
+                JWT_unsigned: TAGJsonData.JWT_unsigned
+            });
+
+            // send commit data back to enclave (so it can forward it to the orks)
+            this.sendMessage(TAGCommitResponse);
+            promise.fulfill(); // fulfil promise, assume Logged In
+        }catch(err){
+            promise.reject(err);
         }
-        const completedData = await this.CompleteSignIn(customModel);
-        promise.fulfill(completedData);
     }
 
     /**
@@ -207,17 +187,6 @@ export class Heimdall{
         return await this.waitForSignal("userData");
     }
 
-    // Signs the requested model / returns TideJWT + sig
-    async CompleteSignIn(customModel=null){
-        // you'll need to post message here to the enclave containing the model to sign
-        if(!(typeof(customModel) === "object" || customModel == null)) throw Error("Custom model must be a object or null");
-        this.enclaveRequest.customModel = customModel;
-        const pre_resp = this.waitForSignal("completed");
-        this.sendMessage(customModel);
-        const resp = await pre_resp;
-        return resp;
-    }
-
     // In case of vendor side error, we can close enclave
     CloseEnclave(){
         this.sendMessage("VENDOR ERROR: Close Tide Enlcave");
@@ -236,24 +205,21 @@ export class Heimdall{
         return new Promise((resolve) => {
             iframe.addEventListener('load', () => resolve());
         })
-        
     }
 
     async redirectToOrk(){
         this.enclaveType = "standard";
         this.enclaveWindow = window.open(this.createOrkURL(), new Date().getTime(), 'width=800,height=800');
-        if(this.enclaveType == "standard" && (this.enclaveFunction == "encrypt" || this.enclaveFunction == "decrypt")){
-            return await this.waitForSignal("pageLoaded"); // we need to wait for the page to load before we send sensitive data
-        }
-        
+        return await this.waitForSignal("pageLoaded"); // wait for page to load, useful for many reasons e.g. sending sensitive data
     }
 
     createOrkURL(){
         return this.currentOrkURL + 
-        `?vendorPublic=${encodeURIComponent(this.vendorPublic)}` +
+        `?gVVK=${encodeURIComponent(this.vendorPublic)}` +
+        `&gVRK=${encodeURIComponent(this.vendorRotatingPublic)}` +
+        `&gVRKSig=${encodeURIComponent(this.vendorRotatingPublicSignature)}` +
+        `&gBFK=${encodeURIComponent(this.BiFrostPublicKey)}` +
         `&vendorPlatform=${encodeURIComponent(this.heimdallPlatform)}` +
-        `&vendorLocation=${encodeURIComponent(this.vendorLocation)}` +
-        `&vendorLocationSig=${encodeURIComponent(this.vendorLocationSignature)}` +
         `&enclaveRequest=${encodeURIComponent(JSON.stringify(this.enclaveRequest))}` +
         `&enclaveType=${this.enclaveType}` +
         `&enclaveFunction=${this.enclaveFunction}` +
@@ -294,21 +260,11 @@ export class Heimdall{
         if(enclaveResponse.ok != true) throw Error("Tide Enclave had an error: " + enclaveResponse.message);
 
         switch (enclaveResponse.dataType) {
-            case "userData":
+            case "tag":
                 return {
-                    responseType: "userData",
-                    PublicKey: enclaveResponse.publicKey,
-                    UID: enclaveResponse.uid,
+                    responseType: "tag",
+                    DataForTAG: enclaveResponse.DataForTAG,
                     NewAccount: enclaveResponse.newAccount
-                }
-            case "completed":
-                if(this.enclaveRequest.refreshToken){
-                    if(!jwtValid(enclaveResponse.TideJWT)) throw Error("TideJWT not valid")
-                }
-                return {
-                    responseType: "completed",
-                    ModelSig: enclaveResponse.modelSig,
-                    TideJWT: enclaveResponse.TideJWT
                 }
             case "encrypt":
                 return {
@@ -335,153 +291,4 @@ export class Heimdall{
                 throw Error("Unknown data type returned from enclave");
         }
     }
-
-    
-    
-}
-
-export class TidePromise {
-    constructor(callback=null) {
-        this.promise = new Promise((resolve, reject) => {
-            // Store the resolve function to be called later
-            this.resolve = resolve;
-            this.reject = reject;
-        });
-        this.callback = callback
-    }
-
-    fulfill(value) {
-        // Fulfill the promise with the provided value
-        this.resolve(value);
-    }
-
-    reject(error) {
-        this.reject(error);
-    }
-}
-
-// FieldData on Heimdall turns into Datum on enclave
-export class FieldData {
-    /**
-     * These identifiers must ALWAYS - EVERY TIME HEIMDALL IS CALLED FROM THIS VENDOR - be supplied in the SAME ORDER. APPEND list for new identifiers
-     * @param {string[]} identifiers 
-     */
-    constructor(identifiers){
-        if(identifiers.length > 255) throw Error("Heimdall: Too many identifiers provided for FieldData");
-        if(identifiers.length == 0) throw Error("Identifiers list required to convert tags to ids");
-        this.identifiers = identifiers
-        this.datas = []
-    }
-
-    /**
-     * @param {Uint8Array} data 
-     * @param {string[]} ids 
-     */
-    add(data, ids){
-        const tag = this.getTag(ids);
-        this.addWithTag(data, tag);
-    }
-
-    /**
-     * @param {Uint8Array} data 
-     * @param {number} tag 
-     */
-    addWithTag(data, tag){
-        let datum = {
-            Data: serializeUint8Array(data),
-            Tag: tag
-        }
-        this.datas.push(datum);
-    }
-
-    /**
-     * @param {object[]} fieldDatas 
-     */
-    addManyWithTag(fieldDatas){
-        if(this.datas.length > 0) throw Error("This FieldData object already has objects in its contents");
-        this.datas = fieldDatas.map(fd => {
-            if(!fd.Data || !fd.Tag) throw Error("Invalid field data supplied");
-            return {
-                Data: deserializeUint8Array(fd.Data),
-                Tag: fd.Tag
-            };
-        })
-    }
-
-    getAll(){
-        return [...this.datas];
-    }
-
-    getAllWithIds(){
-        return this.datas.map(da => {
-            const datum = {
-                Data: da.Data,
-                Ids: this.getIds(da.Tag)
-            }
-            return datum;
-        })
-    }
-
-    /**
-     * @param {string[]} ids 
-     */
-    getTag(ids){
-        let tag = 0; // its basically a mask
-        ids.forEach(id => {
-            // get index of id in id list
-            const index = this.identifiers.indexOf(id);
-            if(index == -1) throw Error("Id not found in identifiers");
-            const mask = 1 << (index);
-            tag |= mask;
-        });
-        return tag;
-    }
-    /**
-     * @param {number} tag 
-     */
-    getIds(tag){
-        const bitLen = this.identifiers.length;
-        let ids = [];
-        for(let i = 0; i < bitLen; i++){
-            const mask = 1 << i;
-            if((tag & mask) != 0){
-                const id = this.identifiers[i];
-                ids.push(id);
-            }
-        }
-        return ids;
-    }
-}
-
-function deserializeUint8Array(base64String) {
-    const binaryString = atob(base64String);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes;
-}
-function serializeUint8Array(uint8Array) {
-    return btoa(String.fromCharCode.apply(null, uint8Array));
-}
-
-function jwtValid(jwt){
-    const decoded = jwt.split(".")
-        .map(a => a.replace(/-/g, '+').replace(/_/g, '/') + "==".slice(0, (3 - a.length % 4) % 3));
-
-    const header = atob(decoded[0]) // header 
-    const payload = atob(decoded[1]) // payload
-
-    if(decoded.length != 3) return false;
-    
-    try{
-        let test_data = JSON.parse(header)
-        if(test_data.typ != "JWT" || test_data.alg != "EdDSA") return false;
-        test_data = JSON.parse(payload)
-        if(test_data.uid == null || test_data.exp == null) return false;
-    }catch{
-        return false;
-    }
-    return true;
 }
