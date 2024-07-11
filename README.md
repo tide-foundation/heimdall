@@ -3,30 +3,30 @@
 ## This repo is part of the FIRST PHASE code. All repos that have this message interact and use one another in some way.
 
 ## What is the Heimdall JS SDK?
-This Javascript SDK was built to enable developers to use Tide's authentication flows in their own apps.
+Heimdall is the internal code name for Tide SDK. This Javascript SDK enables developers to consume Tide's flows in their own web apps.
 
-## Why should you use the Heimdall JS SDK?
-The Heimdall SDK is a tool that allows a website developer to interact and take advantage of the Tide Network's many capabilities. This includes providing unparalleled security for private key management, authentication, and user account recovery.
+## Why use the Heimdall JS SDK?
+The Heimdall SDK is a developer tool that allows a website to interact and take advantage of the Tide Cybersecurity Fabric's (Tide's Decentralized Network) many capabilities of unparalleled security: from cryptographic key management, user authentication, authorization to complete authority and privacy management.
 
 ## Implementation
-The Heimdall SDK was designed to provide 3 layers of functionality for users to have maximum control over the flow, while also allowing a minimal setup to be extremely easy to understand.
+This SDK provides 3 layers of functionality for users to achieve maximum control over the flow, while requiring a minimal setup in order to allow extremely simple developer experience, ease of use and clarity.
 
 #### Layer 1 - Main Heimdall Function
-What do you want from Heimdall at its most general level? The tide button on your main page? For now we only provide the AddTideButton function, but more will soon come. This function should be the only heimdall code that is actually called by you / the vendor, all the other tide functions we'll see later will be called from within the tide process.
+At its most basic level, Heimdall enables a Tide button on a Vendor's web page (you, the developer, are the Vendor, for this purpose). For now we only provide the `AddTideButton` function, but more be added in future iterations. This function should be the only Heimdall code that is actually called by you / the Vendor. All other Tide's functions, as shown later, will be called from within the Tide flows.
 #### Layer 2 - Tide Button Action
-What do you want the main heimdall function to do? Using AddTideButton as an example, what Tide process do you expect the button to execute. We have a variety of options, from PerformTideAuth which will redirect your user with the TideJWT to another URL, to GetUserInfo which will fulfill a promise allowing the vendor to retrieve values from the tide process.
+Once the Tide's button is implemented, there are a variety of options available, from `PerformTideAuth` which will redirect your user to another URL with the TideJWT, to `GetUserInfo` which will fulfill a promise allowing the Vendor to retrieve values from the Tide's flow.
 #### Layer 3 - Action Promise/Callback
-Some Tide Button Actions take a promise as a parameter, while others take a callback. The promise supplied to the action enables us to retrieve values from the tide process after its finished. This is especially useful because Main Heimdall Functions won't typically return values associated with tide flows, but things that the implementor wants such as a button. The promise allows the implementor to await on the tide flow completey seperate to the main heimdall function through the usage of a TidePromise.
+Some Tide's Button Actions take a promise as a parameter, while others take a callback. The promise supplied to the action enables Vendor's devs to retrieve values from the Tide flow once it's finished. This is especially useful because Main Heimdall's Functions won't typically return values associated with Tide's flows, but things that the dev implementor wants such as a button. The promise allows the developer to await on the Tide's flow completely seperate to the main Heimdall function through the usage of a `TidePromise`.
 
-On the other hand, a callback may be supplied to specific Button Actions that require commands from the vendor halfway through a tide process. For example, Tide's sign in, up and change password flows allow for the user to supply their own data to sign halfway through the process. This was allowed since for some applications e.g. SSH Authentication, the public key of the user is required to be signed - among other things. Hence, the callback will be called halfway through the button action, supplied with information such as the user's UID, public key, and account creation status, so the implementor can do whatever they require before the tide flow continues.
+Alternatively, a callback may be supplied to specific Button Actions that require commands from the Vendor halfway through a Tide's flow. For example, Tide's Sign-In, Sign-Up and Change-Password flows allow the user to certify (cryptographically sign) their own data halfway through the process. This enables applications, like SSH Authentication, to sign the public key of the user before completing the flow. In this example, the callback method will be called halfway through the Button Action, supplied with information such as the user's UID, public key, and account creation status, so the Vendor developer can do whatever they require before the Tide flow resumes.
 
-Enough talk, let's see some examples.
-### Basic Tide Button - Perform Tide Auth - 1 Step
+Enough chit-chat. Let's dive in.
+### Basic Tide Button - Perform Tide Authentication - Step 1
 ```javascript
 const config = {
     vendorPublic: "+g/dDdxLqJMOLpJMZ3WIiJ1PEe/12bNhDoIBFmAvgR8=",
     vendorUrlSignature: "0dYi2k4V8Qa5BfKkNSkqcCGQ4d1BIJm6+A5Pwl8DNbZcxQljPnbNk0KG5FTkWjDTbckKHSG7xi1xuzb38uy3Bg==",
-    homeORKUrl: "http://localhost:1001",
+    homeORKUrl: "https://orkeylessh1.azurewebsites.net",
     vendorReturnAuthUrl: "http://localhost:6001?jwt=",
     enclaveRequest: {
         refreshToken: true, // I want a TideJWT returned
@@ -38,12 +38,12 @@ const heimdall = new Heimdall(config);
 const tideButtonAction = async () => heimdall.PerformTideAuth(); // describe what we want the tide button to do
 const tideButton = heimdall.AddTideButton(tideButtonAction); // returns Tide Button for you to stylise
 ```
-### Basic Tide Button - Perform Tide Auth - 2 Step
+### Basic Tide Button - Perform Tide Authentication - Step 2
 ```javascript
 const config = {
     vendorPublic: "+g/dDdxLqJMOLpJMZ3WIiJ1PEe/12bNhDoIBFmAvgR8=",
     vendorUrlSignature: "0dYi2k4V8Qa5BfKkNSkqcCGQ4d1BIJm6+A5Pwl8DNbZcxQljPnbNk0KG5FTkWjDTbckKHSG7xi1xuzb38uy3Bg==",
-    homeORKUrl: "http://localhost:1001",
+    homeORKUrl: "https://orkeylessh1.azurewebsites.net",
     vendorReturnAuthUrl: "http://localhost:6001?jwt=",
     enclaveRequest: {
         refreshToken: true, // I want a TideJWT returned
@@ -63,12 +63,12 @@ const vendorCallback = (userInfo) => {
 const tideButtonAction = async (callback) => heimdall.PerformTideAuth(callback); // describe what we want the tide button to do
 const tideButton = heimdall.AddTideButton(tideButtonAction, vendorCallback); // returns Tide Button for you to stylise
 ```
-### Basic Tide Button - Get Completed - 1 Step
+### Basic Tide Button - Get Completed - Step 1
 ```javascript
 const config = {
     vendorPublic: "+g/dDdxLqJMOLpJMZ3WIiJ1PEe/12bNhDoIBFmAvgR8=",
     vendorUrlSignature: "0dYi2k4V8Qa5BfKkNSkqcCGQ4d1BIJm6+A5Pwl8DNbZcxQljPnbNk0KG5FTkWjDTbckKHSG7xi1xuzb38uy3Bg==",
-    homeORKUrl: "http://localhost:1001",
+    homeORKUrl: "https://orkeylessh1.azurewebsites.net",
     vendorReturnAuthUrl: "http://localhost:6001?jwt=",
     enclaveRequest: {
         refreshToken: true, // I want a TideJWT returned
@@ -84,12 +84,12 @@ const tideButton = heimdall.AddTideButton(tideButtonAction, tidePromise); // ret
 const values = await tidePromise.promise;
 // Will include fields TideJWT, ModelSig (ModelSig will be undefined as no model was supplied)
 ```
-### Basic Tide Button - Get Completed - 2 Step
+### Basic Tide Button - Get Completed - Step 2
 ```javascript
 const config = {
     vendorPublic: "+g/dDdxLqJMOLpJMZ3WIiJ1PEe/12bNhDoIBFmAvgR8=",
     vendorUrlSignature: "0dYi2k4V8Qa5BfKkNSkqcCGQ4d1BIJm6+A5Pwl8DNbZcxQljPnbNk0KG5FTkWjDTbckKHSG7xi1xuzb38uy3Bg==",
-    homeORKUrl: "http://localhost:1001",
+    homeORKUrl: "https://orkeylessh1.azurewebsites.net",
     vendorReturnAuthUrl: "http://localhost:6001?jwt=",
     enclaveRequest: {
         refreshToken: true, // I want a TideJWT returned
