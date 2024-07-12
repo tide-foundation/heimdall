@@ -30,8 +30,8 @@ To implement the Heimdall SDK, you only need to follow these 3 simple steps:
 ### Securing the Vendor
 One of Tide's strongest security feature is the binding of the security around the Vendor. This is to guarantee that no one other than the rightful Vendor has access to the services and information of that Vendor. This is done by the assignment of a cryptographic key to the Vendor.
 
-To generate a key, use the provided `vendorSign` utility in this SDK. This simple nodeJS utility will generate a new key for the Vendor and sign the base URL of the Vendor's site.
-Before you run the utility, make sure to verify the URL is set correctly for your application by editing the vendorSign.mjs file: `yourURL` Should point to the base URL of your site, e.g. https://myapp.io or http://localhost:8000
+To generate a key, use the provided `SetUp` utility in this SDK. This simple nodeJS utility will generate a new key for the Vendor and sign the base URL of the Vendor's site. See detailed usage instructions [here](README.md#using-the-vendorsign-utility).
+Before you run the utility, make sure to verify the URL is set correctly for your application by editing the `index.mjs` file: `yourURL` should point to the base URL of your site, e.g. https://myapp.io or http://localhost:8000
 
 The utility will spit out 3 results for you, that you'll need to keep:
 - `Vendor private key` A BASE64 string representing your Vendor's private key. Keep it secret. Keep it safe.
@@ -104,7 +104,88 @@ const values = await tidePromise.promise;
 ```
 
 ### Secure user data
+The Heimdall SDK can also be used to lock and unlock sensitive data with keys stored in the Fabric through decentralized encryption and decryption processes in your web app.
+Here's an example of encyption. This code needs to be added to the ones above:
+``` javascript
+const vuid = values.UID;
 
+const enc = new TextEncoder();
+const dec = new TextDecoder();
 
+const encryptPromise = new TidePromise();
+const idList = ["secret1", "secret2", "secret3"]
+const fieldData = new FieldData(idList);
+fieldData.add(enc.encode("yomamma"), ["secret2"]);
+
+const ac2 = async(params) => { return await heimdall.EncryptUserData(params); }
+const params = [vuid, fieldData, encryptPromise];
+const tBtn2 = heimdall.AddTideButton(ac2, params);
+tBtn2.style.background = "blue";
+        
+const serializedFields = await encryptPromise.promise;
+
+console.log(serializedFields);
+```
+This example will create a list of 3 fields of secrets to encrypt. It will encode the value `yomamma` as secret #2. After loggin-in to Tide, another blue button will appear, once pressed, will encrypt that field-array and hold it in memory as `serializedFields`. This example will display that serialized variable in the browser's console.
+
+Here's the code to decrypt that field:
+``` javascript
+const decryptPromise = new TidePromise();
+const ac3 = async(params) => { return await heimdall.DecryptUserData(params); }
+const params2 = [vuid, serializedFields, decryptPromise];
+const tBtn3 = heimdall.AddTideButton(ac3, params2);
+tBtn3.style.background = "purple";
+
+const decrypted = await decryptPromise.promise;
+const fieldData2 = new FieldData(idList);
+fieldData2.addManyWithTag(decrypted);
+const fdIds = fieldData2.getAllWithIds();
+
+console.log(fdIds);
+console.log(dec.decode(fdIds[1].Data));
+```
+This script will present a purple Tide button, once pressed will decrypt the encrypted data and will log the results to console.
+
+## Secure user data (without buttons)
+Here's another way to encrypt and decrypt similar information using a similar technique that doesn't use a Tide-branded button. Be aware that without a user interaction, like pressing a button, most browsers will block the necessary "pop-up" action required for this facility.
+``` javascript
+// encryption
+const encryptPromise = new TidePromise();
+const idList = ["secret1", "secret2", "secret3"]
+const fieldData = new FieldData(idList);
+fieldData.add(enc.encode("yomamma"), ["secret2"]);
+heimdall.EncryptUserData([vuid, fieldData, encryptPromise]);
+const serializedFields = await encryptPromise.promise;
+console.log(serializedFields)
+
+//decryption		
+const fieldDatasDecrypted = new FieldData(idList);
+const tidePromiseDecrypt = new TidePromise();
+heimdall.DecryptUserData([vuid, serializedFields, tidePromiseDecrypt]);
+const decryptedRaw = await tidePromiseDecrypt.promise; 
+fieldDatasDecrypted.addManyWithTag(decryptedRaw); 
+const decryptedWithIds = fieldDatasDecrypted.getAllWithIds();
+console.log(decryptedWithIds)
+console.log(dec.decode(decryptedWithIds[0].Data));
+```
 
 ## For the full example, see [sample-vendor](https://github.com/tide-foundation/sample-vendor/tree/main) NOT UPDATED YET 22/11/23
+
+# FAQ
+
+## Using the SetUp utility
+To use the `SetUp` utility to generate keys and sign the app URL, you'll need to build it first. The utility is a nodeJS application that requires NPM and NODE installed on your machine.
+1. Install prerequisits: [Node and NPM](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+2. Navigate to the `/SetUp/` folder in this repo
+3. Compile using `npm install`
+4. Change the `yourURL` URL setting in `index.mjs`
+5. Run using `node index.mjs`
+Here's this process on a Debian machine:
+``` shell
+sudo apt install -y npm
+sudo apt install -y node
+cd SetUp
+nano index.mjs
+npm install
+node index.mjs
+```
