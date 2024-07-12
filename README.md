@@ -8,7 +8,7 @@ Heimdall is the internal code name for Tide SDK. This Javascript SDK enables dev
 ## Why use the Heimdall JS SDK?
 The Heimdall SDK is a developer tool that allows a website to interact and take advantage of the Tide Cybersecurity Fabric's (Tide's Decentralized Network) many capabilities of unparalleled security: from cryptographic key management, user authentication, authorization to complete authority and privacy management.
 
-## Implementation
+## Overview
 This SDK provides 3 layers of functionality for users to achieve maximum control over the flow, while requiring a minimal setup in order to allow extremely simple developer experience, ease of use and clarity.
 
 #### Layer 1 - Main Heimdall Function
@@ -21,58 +21,35 @@ Some Tide's Button Actions take a promise as a parameter, while others take a ca
 Alternatively, a callback may be supplied to specific Button Actions that require commands from the Vendor halfway through a Tide's flow. For example, Tide's Sign-In, Sign-Up and Change-Password flows allow the user to certify (cryptographically sign) their own data halfway through the process. This enables applications, like SSH Authentication, to sign the public key of the user before completing the flow. In this example, the callback method will be called halfway through the Button Action, supplied with information such as the user's UID, public key, and account creation status, so the Vendor developer can do whatever they require before the Tide flow resumes.
 
 Enough chit-chat. Let's dive in.
-### Basic Tide Button - Perform Tide Authentication - Step 1
-```javascript
-const config = {
-    vendorPublic: "+g/dDdxLqJMOLpJMZ3WIiJ1PEe/12bNhDoIBFmAvgR8=",
-    vendorUrlSignature: "0dYi2k4V8Qa5BfKkNSkqcCGQ4d1BIJm6+A5Pwl8DNbZcxQljPnbNk0KG5FTkWjDTbckKHSG7xi1xuzb38uy3Bg==",
-    homeORKUrl: "https://orkeylessh1.azurewebsites.net",
-    vendorReturnAuthUrl: "http://localhost:6001?jwt=",
-    enclaveRequest: {
-        refreshToken: true, // I want a TideJWT returned
-        customModel: undefined // I do not want to provide a customModel
-    }
-}
+## Implementation
+To implement the Heimdall SDK, you only need to follow these 3 simple steps:
+1. Download SDK
+2. Generate a Vendor key and sign your Vendor URL
+4. Implement Tide Button in page
 
-const heimdall = new Heimdall(config);
-const tideButtonAction = async () => heimdall.PerformTideAuth(); // describe what we want the tide button to do
-const tideButton = heimdall.AddTideButton(tideButtonAction); // returns Tide Button for you to stylise
-```
-### Basic Tide Button - Perform Tide Authentication - Step 2
-```javascript
-const config = {
-    vendorPublic: "+g/dDdxLqJMOLpJMZ3WIiJ1PEe/12bNhDoIBFmAvgR8=",
-    vendorUrlSignature: "0dYi2k4V8Qa5BfKkNSkqcCGQ4d1BIJm6+A5Pwl8DNbZcxQljPnbNk0KG5FTkWjDTbckKHSG7xi1xuzb38uy3Bg==",
-    homeORKUrl: "https://orkeylessh1.azurewebsites.net",
-    vendorReturnAuthUrl: "http://localhost:6001?jwt=",
-    enclaveRequest: {
-        refreshToken: true, // I want a TideJWT returned
-        customModel: undefined // I do not want to provide a customModel - yet
-    }
-}
+### Securing the Vendor
+One of Tide's strongest security feature is the binding of the security around the Vendor. This is to guarantee that no one other than the rightful Vendor has access to the services and information of that Vendor. This is done by the assignment of a cryptographic key to the Vendor.
 
-const heimdall = new Heimdall(config);
-const vendorCallback = (userInfo) => {
-  console.log("This is being run halfway through the flow");
-  var customModel = {
-    Name: "OpenSSH",
-    Data: "Some data to sign" // this obviously won't work, but this is the format customModel should be e.g. have a Name and Data field
-  }
-  return customModel;
-}
-const tideButtonAction = async (callback) => heimdall.PerformTideAuth(callback); // describe what we want the tide button to do
-const tideButton = heimdall.AddTideButton(tideButtonAction, vendorCallback); // returns Tide Button for you to stylise
-```
-### Basic Tide Button - Get Completed - Step 1
+To generate a key, use the provided `vendorSign` utility in this SDK. This simple nodeJS utility will generate a new key for the Vendor and sign the base URL of the Vendor's site.
+Before you run the utility, make sure to verify the URL is set correctly for your application by editing the vendorSign.mjs file: `yourURL` Should point to the base URL of your site, e.g. https://myapp.io or http://localhost:8000
+
+The utility will spit out 3 results for you, that you'll need to keep:
+- `Vendor private key` A BASE64 string representing your Vendor's private key. Keep it secret. Keep it safe.
+- `Vendor public key` A BASE64 string representing your Vendor's public key. You'll need that key in your app.
+- `Vendor URL Signature` A BASE64 string representing the signed URL of your application. You'll need that signature in your app.
+
+### Basic Tide Button - 1 Step process
+Here's an example you can put in your web app:
 ```javascript
+import {Heimdall, TidePromise, FieldData} from './src/heimdall.js';
 const config = {
     vendorPublic: "+g/dDdxLqJMOLpJMZ3WIiJ1PEe/12bNhDoIBFmAvgR8=",
     vendorUrlSignature: "0dYi2k4V8Qa5BfKkNSkqcCGQ4d1BIJm6+A5Pwl8DNbZcxQljPnbNk0KG5FTkWjDTbckKHSG7xi1xuzb38uy3Bg==",
     homeORKUrl: "https://orkeylessh1.azurewebsites.net",
     vendorReturnAuthUrl: "http://localhost:6001?jwt=",
     enclaveRequest: {
-        refreshToken: true, // I want a TideJWT returned
-        customModel: undefined // I do not want to provide a customModel
+        refreshToken: true, 
+        customModel: undefined 
     }
 }
 
@@ -84,7 +61,17 @@ const tideButton = heimdall.AddTideButton(tideButtonAction, tidePromise); // ret
 const values = await tidePromise.promise;
 // Will include fields TideJWT, ModelSig (ModelSig will be undefined as no model was supplied)
 ```
-### Basic Tide Button - Get Completed - Step 2
+Explenation:
+- Import the Heimdall.js from a relative position of your app or store it in a CDN.
+- Place the `Vendor private key` from previous step in the `vendorPublic` setting.
+- Place the `Vendor URL Signature` in the `vendorUrlSignature` setting.
+- The `homeORKUrl` setting denotes the default ORK (Tide Node) to be used by your user. Keep as is or select the one of your choice.
+- Change the `vendorReturnAuthUrl` setting to include your app URL, but keep the "?jwt=" suffix as is. So if your app is hosted on myapp.io, change this setting to `"https://myapp.io?jwt="`.
+- `refreshToken` should stay set to `true` to receive the JWT access token back.
+- `customModel` is used to handle custom signature models (other than JWT) e.g. SSH access request
+
+### Advanced Tide Button - 2 Step process
+This examples shows a 2-step process that injects a request to sign a message with the user's key midway through the authentication flow:
 ```javascript
 const config = {
     vendorPublic: "+g/dDdxLqJMOLpJMZ3WIiJ1PEe/12bNhDoIBFmAvgR8=",
@@ -115,4 +102,9 @@ const tideButton = heimdall.AddTideButton(tideButtonAction, tidePromise); // ret
 const values = await tidePromise.promise;
 // Will include fields TideJWT, ModelSig
 ```
+
+### Secure user data
+
+
+
 ## For the full example, see [sample-vendor](https://github.com/tide-foundation/sample-vendor/tree/main) NOT UPDATED YET 22/11/23
