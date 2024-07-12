@@ -166,7 +166,7 @@ const decryptedRaw = await tidePromiseDecrypt.promise;
 fieldDatasDecrypted.addManyWithTag(decryptedRaw); 
 const decryptedWithIds = fieldDatasDecrypted.getAllWithIds();
 console.log(decryptedWithIds)
-console.log(dec.decode(decryptedWithIds[0].Data));
+console.log(dec.decode(decryptedWithIds[1].Data));
 ```
 
 ## For the full example, see [sample-vendor](https://github.com/tide-foundation/sample-vendor/tree/main) NOT UPDATED YET 22/11/23
