@@ -169,7 +169,7 @@ console.log(decryptedWithIds)
 console.log(dec.decode(decryptedWithIds[1].Data));
 ```
 
-## For the full example, see [sample-vendor](https://github.com/tide-foundation/sample-vendor/tree/main) NOT UPDATED YET 22/11/23
+## For a full project example, see [SecretAlbum example](SecretAlbum) in this repo.
 
 # FAQ
 
