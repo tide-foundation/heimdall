@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<script type="module" src="main.js"></script>
+<style>
+    /* https://codepen.io/cassandraPaige/pen/ZEYmMJg */
+
+    * {
+        font-family: monospace, sans-serif;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    :root {
+        --navbar-color: #63b382;
+        --section1-color: #d6bcac;
+        --section2-color: #d4e4a5;
+        --section3-color: #cbc1d3;
+        --section4-color: #e6f8b2;
+    }
+
+    #appname {
+        margin-top: 20px;
+        margin-right: 20px;
+        float: right
+    }
+
+    .container {
+        margin-left: 60px;
+        background: #ffffff;
+        /* min-height: 100vh; */
+        font-family: monospace, sans-serif;
+    }
+
+    nav a {
+        /* font-size: 40px; */
+        color: #fff;
+        text-decoration: none;
+        padding: 10px;
+        text-align: center;
+    }
+
+    nav a img {
+        margin-top: 20px;
+    }
+
+    nav {
+        position: fixed;
+        left: 0;
+        z-index: 50;
+        display: relative;
+        /* justify-content: space-around; */
+        /* flex-direction: column; */
+        min-height: 100vh;
+        background: var(--navbar-color);
+    }
+
+    section {
+        position: fixed;
+        padding-left: 100px;
+        top: 0;
+        /* height: 300vh; */
+        width: 0;
+        opacity: 0;
+        transition: all ease-out 2s;
+        /* display: flex; */
+        /* justify-content: right; */
+        align-items: center;
+    }
+
+    section h2 {
+        /* color: #fff; */
+        font-size: 35px;
+        margin-top: 30px;
+        opacity: 0;
+    }
+
+    section * {
+        opacity: 0;
+    }
+
+    /* Styles applied on trigger */
+    section:target {
+        opacity: 1;
+        position: absolute;
+        left: 0;
+        width: 100%;
+        z-index: 10;
+        /* z-index of -1 makes the appname appear */
+    }
+
+    section:target * {
+        opacity: 0;
+        animation: 2s fadeIn forwards .2s;
+    }
+
+    #account {
+        background: var(--section1-color);
+        min-height: 100vh;
+    }
+
+    #upload {
+        background: var(--section3-color);
+        min-height: 100vh;
+    }
+
+    @keyframes fadeIn {
+        100% {
+            opacity: 1
+        }
+    }
+</style>
+
+<head>
+    <title>Secret Album</title>
+</head>
+
+<nav>
+    <a href="#account" id="accountmenu">
+        <img src="images/account.png" alt="Account" width="40" height="40">
+    </a>
+    <br>
+    <a href="#upload">
+        <img src="images/upload.png" alt="Upload" width="40" height="40">
+    </a>
+    <br>
+    <a href="#logout" id="logoutbtn">
+        <img src="images/logout.png" alt="Log Out" width="40" height="40">
+    </a>
+    <br>
+</nav>
+
+<div class='container'>
+    <img id="appname" src="images/logo.png" alt="Logo" height="60">
+    <br>
+    <section id='account'>
+        <h2>My Album</h2>
+        <br>
+        <h3 id="frontpagealias"></h3>
+        <br><br>
+        <table id="myalbumtbl">
+            <thead>
+                <tr>
+                    <th width="350px"></th>
+                    <th width="350px"></th>
+                    <th width="60px"></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </section>
+
+    <section id='upload'>
+        <h2>Upload Image</h2>
+        <br>
+        <input id="imgfileinput" type="file" accept="image/jpeg, image/png, image/jpg">
+        <br>
+        <input id="descriptioninput" type="text" placeholder="Description" size="50">
+        <button class="btn" id="uploadbtn">Upload</button>
+        <br><br>
+        <canvas id="imgfileoutput"></canvas>
+    </section>
+
+</div>
+
+</html>
