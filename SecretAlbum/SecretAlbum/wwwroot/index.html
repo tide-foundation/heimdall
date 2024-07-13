@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<script type="module">
+    import {  TidePromise } from 'https://cdn.jsdelivr.net/gh/tide-foundation/heimdall@main/src/heimdall.js';
+    import { heimdall, idList } from "./config.js"
+
+    const vendorCallback = (userInfo) => {
+        console.log(userInfo);
+        sessionStorage.setItem("uid", userInfo.UID);
+        sessionStorage.setItem("publickey", userInfo.PublicKey);
+        return null;
+    }
+    const tidePromise = new TidePromise(vendorCallback); // a TidePromise which allows us to get the values from the FULL sign in process
+    const tideButtonAction = async (promise) => heimdall.GetCompleted(promise); // describe what we want the tide button to do
+    const tideButton = heimdall.AddTideButton(tideButtonAction, tidePromise); // returns Tide Button for you to stylise
+    tideButton.style.position = "absolute";
+    tideButton.style.left = "45%";
+    tidePromise.promise.then((vals) => {
+        console.log(vals);
+        sessionStorage.setItem("jwt", vals.TideJWT);
+        window.location.replace(window.location.origin + "/main.html#account");
+    });
+
+    /*
+    document.getElementById('loginBtn').addEventListener('click', async function () {
+        var user = document.getElementById('username_si').value;
+        var pass = document.getElementById('password_si').value;
+        var userAlias = document.getElementById('userAlias_si').value;
+        var obj = await signIn.start_Heimdall(user, pass);
+
+        sessionStorage.setItem("CVK", obj.CVK);
+        sessionStorage.setItem("UID", obj.UID);
+        sessionStorage.setItem("userAlias", userAlias);
+
+        window.location.replace(window.location.origin + "/main.html#account");
+    });
+
+    document.getElementById('signupBtn').addEventListener('click', async function () {
+        var user = document.getElementById('username_su').value;
+        var pass = document.getElementById('password_su').value;
+        // var userAlias = document.getElementById('userAlias_si').value;
+        var obj = await signUp.start_Heimdall(user, pass);
+
+        // sessionStorage.setItem("CVK", obj.CVK);
+        // sessionStorage.setItem("UID", obj.UID);
+        // sessionStorage.setItem("userAlias", userAlias);
+
+        window.location.replace(window.location.origin);
+    });
+    */
+
+</script>
+<script>
+
+    sessionStorage.removeItem("CVK");
+    sessionStorage.removeItem("UID");
+    sessionStorage.removeItem("userAlias");
+
+    function switchDiv() {
+        if (document.getElementById("login_form").style.display === "none") {
+            document.getElementById("login_form").style.display = "block"
+            document.getElementById("signup_form").style.display = "none";
+        } else if (document.getElementById("signup_form").style.display === "none") {
+            document.getElementById("signup_form").style.display = "block";
+            document.getElementById("login_form").style.display = "none";
+        }
+    }
+</script>
+
+<head>
+    <title>SecretAlbum</title>
+</head>
+
+<body>
+    <div class="content">
+        <header style="font-family: 'Courier New', monospace; text-align: center;">
+            <img id="appname" src="images/logo.png" alt="Logo" height="100">
+            <p>Secured with the Tide Network</p>
+        </header>
+    </div>
+</body>
+
+</html>
