@@ -10,7 +10,7 @@
         const heimdall = new Heimdall("http://localhost:7000?type=approval", []);
 
         await heimdall.openEnclave();
-        await heimdall.sayHello();
+        console.log(await heimdall.getAuthorizerApproval("User:Alice,Group:Admin"));
     </script>  
 
     </body>
