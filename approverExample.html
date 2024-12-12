@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+      
+    <body>
+        <p>Vendor HTML page</p>
+
+    <script type="module">
+        import {Heimdall} from './src/heimdall.js';
+
+        const heimdall = new Heimdall("http://localhost:7000?type=approval", []);
+
+        await heimdall.openEnclave();
+        await heimdall.sayHello();
+    </script>  
+
+    </body>
+    
+    
+    
+
+
+</html>
