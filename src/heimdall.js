@@ -85,6 +85,20 @@ export class Heimdall{
         return await pre_response;
     }
 
+    async getAuthorizerAuthentication(){
+        // ready to accept reply
+        const pre_response = this.waitForMessage("authentication");
+
+        // send to enclave
+        this.sendMessage({
+            type: "authentication",
+            message: "pretty please"
+        });
+
+        // wait for response - this does not mean that enclave it closed, just that the admin has responded to the approval request from the enclave
+        return await pre_response;
+    }
+
     async openEnclave(){
         this.enclaveWindow = window.open(this.getFullAuthorizedOrkUrl(), new Date().getTime(), 'width=800,height=800'); // is date correct to use here??????????????????????????????????????????
         await this.waitForMessage("pageLoaded"); // we need to wait for the page to load before we send sensitive data
@@ -132,6 +146,9 @@ export class Heimdall{
 
         let response = "";
         switch (enclaveResponse.type) {
+            case "authentication":
+                response = enclaveResponse.message;
+                break;
             case "hello":
                 response = enclaveResponse.message;
                 break;
