@@ -7,10 +7,14 @@
     <script type="module">
         import {Heimdall} from './src/heimdall.js';
 
-        const heimdall = new Heimdall("http://localhost:7000?type=approval", []);
+        const heimdall = new Heimdall(`http://localhost:7000/?sid=d90a8650-2cf1-4e77-ad3c-ed17afe8bae9&gVVK=29319cc3b49abc65c3f7c289058b5cd9bb0d532bc5dcd97879a5dee03c262349&authorizerPack=010000000500000056524B3A3137000000010000002300000020000017ffad8068dc0de9935d36636f3ad1b5de6de3413b12388e453b05f2a4c1d3db08000000F7ED6F67000000000B000000526F7461746556524B3A311900000054696465636C6F616B55706461746553657474696E67733A31&vRedirectUri=http://localhost:8000&signedSettings={"RegOn":true,"BackupOn":false,"LogoURL":"https://login.dauth.me/realms/Espo/tide-idp-resources/images/LOGO","ImageURL":"https://login.dauth.me/realms/Espo/tide-idp-resources/images/BACKGROUND_IMAGE"}&voucherURL=http://localhost:3000/voucher/new&type=cmkOnly`, ["da843827833c87212b82941f1d6abe02bb7066d183c2212a9bc0f80d000378c7", "abcdefg"]);
 
         await heimdall.openEnclave();
         console.log(await heimdall.getAuthorizerApproval("User:Alice,Group:Admin"));
+        console.log(await heimdall.getAuthorizerApproval("User:Bob,Group:Student"));
+        console.log(await heimdall.getAuthorizerAuthentication());
+        await heimdall.closeEnclave();
+        console.log("done");
     </script>  
 
     </body>

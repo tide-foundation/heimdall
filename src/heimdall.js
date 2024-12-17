@@ -32,6 +32,8 @@ export class Heimdall{
 
     getFullAuthorizedOrkUrl(){
         const u = new URL(this.authorizedOrkURL);
+        u.searchParams.set("type", "approval");
+        u.searchParams.set("acceptedIds", JSON.stringify(this.acceptedAdminIds));
         return this.authorizedOrkOrigin + u.pathname + u.search;
     }
 
@@ -76,7 +78,6 @@ export class Heimdall{
         this.sendMessage({
             type: "approval",
             message: {
-                acceptedAuthorizerIds: this.acceptedAdminIds,
                 draftToAuthorize: draftToApprove
             }
         });
@@ -105,10 +106,7 @@ export class Heimdall{
     }
 
     closeEnclave(){
-        this.sendMessage({
-            type: "general",
-            message: "close"
-        });
+        this.enclaveWindow.close();
     }
 
     async waitForMessage(responseTypeToAwait) {
@@ -119,7 +117,7 @@ export class Heimdall{
                     resolve(response.message);
                     window.removeEventListener("message", handler);
                 }else{
-                    console.error(response.error);
+                    console.log(response.error);
                 }
             };
             window.addEventListener("message", handler, false);
@@ -142,8 +140,6 @@ export class Heimdall{
         }
         const enclaveResponse = data;
 
-        if(expectedType !== enclaveResponse.type) return {ok: false, error: "UNEXPECTED RESPONSE TYPE"};
-
         let response = "";
         switch (enclaveResponse.type) {
             case "authentication":
@@ -163,6 +159,10 @@ export class Heimdall{
             default:
                 throw Error("Expected type of " + enclaveResponse.type + " is not part of types we can process");
         }
+
+        // perform line below as there are some listeners that heimdall requires to function properyl such as newORKUrl
+        if(expectedType !== enclaveResponse.type) return {ok: false, error: "Received " + enclaveResponse.type + " but waiting for " + expectedType};
+
         return {ok: true, message: response}
     }
 }
