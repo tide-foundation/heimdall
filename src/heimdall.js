@@ -70,7 +70,7 @@ export class Heimdall{
         console.log(response);
     }
 
-    async getAuthorizerApproval(draftToApprove, modelId, expiry){
+    async getAuthorizerApproval(draftToApprove, modelId, expiry, encoding="bytes"){
         // ready to accept reply
         const pre_response = this.waitForMessage("approval");
 
@@ -78,7 +78,10 @@ export class Heimdall{
         this.sendMessage({
             type: "approval",
             message: {
-                draftToAuthorize: draftToApprove,
+                draftToAuthorize: {
+                    data: draftToApprove,
+                    encoding: encoding
+                },
                 modelId: modelId,
                 expiry: expiry
             }
