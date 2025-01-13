@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+      
+    <body>
+        <p>Vendor HTML page</p>
+
+    <script type="module">
+        import {Heimdall} from './src/heimdall.js';
+
+        const heimdall = new Heimdall(`http://localhost:7000/?sid=d90a8650-2cf1-4e77-ad3c-ed17afe8bae9&gVVK=29319cc3b49abc65c3f7c289058b5cd9bb0d532bc5dcd97879a5dee03c262349&authorizerPack=010000000500000056524B3A3137000000010000002300000020000017ffad8068dc0de9935d36636f3ad1b5de6de3413b12388e453b05f2a4c1d3db08000000F7ED6F67000000000B000000526F7461746556524B3A311900000054696465636C6F616B55706461746553657474696E67733A31&vRedirectUri=http://localhost:8000&signedSettings={"RegOn":true,"BackupOn":false,"LogoURL":"https://login.dauth.me/realms/Espo/tide-idp-resources/images/LOGO","ImageURL":"https://login.dauth.me/realms/Espo/tide-idp-resources/images/BACKGROUND_IMAGE"}&voucherURL=http://localhost:3000/voucher/new&type=cmkOnly`, ["ac107ed95f9e1e20941b2d782028cd37e1494ecdb75017c786df4f859a097bfe", "abcdefg"]);
+
+        await heimdall.openEnclave();
+        console.log(await heimdall.getAuthorizerApproval(`AQAAAAEAAAABXQEAAGV5SnJhV1FpT2lJMk9UUTJOemN5TlRNNU1UWTRNemt3T1RBMU5UQTFPVGN6T0RJNE5UQTROamN4TURFeE9UWTVNVE0yTkRNNE5qa3hOamd4TlRnd01EazVNakl5TlRZMU9ESXpOelkxTXpZME1qWXdJaXdpWVd4bklqb2lSV1JFVTBFaUxDSjJiaUk2SWpFaWZRPT0uZXlKMlpXNWtiM0lpT2lKdGVYSmxZV3h0SWl3aWNtVnpiM1Z5WTJVaU9pSnpaV04xY21sMGVTMWhaRzFwYmkxamIyNXpiMnhsSWl3aWRHaHlaWE5vYjJ4a0lqb3hMQ0pwWkNJNklqTTFaVGxqWkdFMUxUUm1OekV0TkRsak5pMWlaVFkzTFRkaVpXUmxNVEpsTUdFME5TSXNJbk5wWjI1dGIyUmxiSE1pT2xzaVZYTmxja052Ym5SbGVIUlRhV2R1T2pFaVhYMD2BAwAAeyJ0eXAiOiJCZWFyZXIiLCJzdWIiOiI2MTE2MDg5Mi03ZTE0LTQ5MTQtYTU2Ni0xNzc1NzhjODFhYjEiLCJlbWFpbCI6ImFhQHRpZGUub3JnIiwiYXpwIjoibXljbGllbnQiLCJzY29wZSI6Im9wZW5pZCBwcm9maWxlIGVtYWlsIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJhbGxvd2VkLW9yaWdpbnMiOlsiaHR0cHM6Ly93d3cua2V5Y2xvYWsub3JnIl0sInZ1aWQiOiJiYmRkMjQ2MWRkMWYyZTA0OTQzZDY4ZmU0YWNlYTQyZWNlZWY5NzEyOTExMTRjNGE1ZTVmZjQ1NDljOGY0MDE4IiwibmFtZSI6ImFhIGFhIiwiZmFtaWx5X25hbWUiOiJhYSIsInByZWZlcnJlZF91c2VybmFtZSI6ImJiZGQyNDYxZGQxZjJlMDQ5NDNkNjhmZTRhY2VhNDJlY2VlZjk3MTI5MTExNGM0YTVlNWZmNDU0OWM4ZjQwMTgiLCJhdWQiOlsiYWNjb3VudCIsIm15Y2xpZW50Il0sImdpdmVuX25hbWUiOiJhYSIsInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJkZWZhdWx0LXJvbGVzLW15cmVhbG0iLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsibXljbGllbnQiOnsicm9sZXMiOlsidGVzdCJdfSwiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDgwL3JlYWxtcy9teXJlYWxtIiwidGlkZXVzZXJrZXkiOiIyMDAwMDA1NGQxNTEyMWVlNzY5NjNkYzg0NDUxMDEzNmU3YjZkMjI4NjI0YTY1M2I3NzY5NDg5ZDBhY2UxN2IxNTU2Mzg4IiwiSW5pdENlcnRIYXNoIjoiUjRWeW9lX1MtVkhhbFFNLTVTRXpZMzBPVEh2SEtrY1RVUDV6UDdkUDdGYXhxMmZ2dnZqZ205R2hBQlRqQnBrZWNpY2l5bVZ6V2lDaURKbTAxQ2QxR3c9PSJ9`, "UserContext:1", 123456789, "base64url"));
+        console.log(await heimdall.getAuthorizerAuthentication());
+        await heimdall.closeEnclave();
+        console.log("done");
+    </script>  
+
+    </body>
+    
+    
+    
+
+
+</html>
