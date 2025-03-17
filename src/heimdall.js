@@ -57,6 +57,7 @@ export class Heimdall{
         document.body.appendChild(button); // add button to page
         return button;
     }
+    
 
     async sayHello(){
         const pre_response = this.waitForMessage("hello");
@@ -108,6 +109,12 @@ export class Heimdall{
     async openEnclave(){
         this.enclaveWindow = window.open(this.getFullAuthorizedOrkUrl(), new Date().getTime(), 'width=800,height=800'); // is date correct to use here??????????????????????????????????????????
         await this.waitForMessage("pageLoaded"); // we need to wait for the page to load before we send sensitive data
+
+        // Immediately reemove message event listener on manual close 
+        this.enclaveWindow.addEventListener("beforeunload", () => {
+            window.removeEventListener("message", handler);
+        });
+  
     }
 
     closeEnclave(){
@@ -140,6 +147,8 @@ export class Heimdall{
     */
     processEvent(data, origin, expectedType){
         if (origin !== this.authorizedOrkOrigin) {
+            console.log(origin);
+            console.log(this.authorizedOrkOrigin);
             // Something's not right... The message has come from an unknown domain... 
             return {ok: false, error: "WRONG WINDOW SENT MESSAGE"};
         }
