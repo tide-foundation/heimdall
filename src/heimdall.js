@@ -112,6 +112,7 @@ export class Heimdall{
     }
 
     closeEnclave(){
+        this.removeMessageListener();
         this.enclaveWindow.close();
     }
 
@@ -172,8 +173,7 @@ export class Heimdall{
             case "pageLoaded":
                 break;
             case "iframeClosed":
-                this.removeMessageListener();
-                return {ok: true, message: "Approval enclave closed."}
+                break;
             default:
                 throw Error("Expected type of " + enclaveResponse.type + " is not part of types we can process");
         }
