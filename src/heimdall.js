@@ -109,10 +109,6 @@ export class Heimdall{
     async openEnclave(){
         this.enclaveWindow = window.open(this.getFullAuthorizedOrkUrl(), new Date().getTime(), 'width=800,height=800'); // is date correct to use here??????????????????????????????????????????
         await this.waitForMessage("pageLoaded"); // we need to wait for the page to load before we send sensitive dat
-
-        // Immediately remove message event listener on manual close 
-        this.enclaveWindow.addEventListener("beforeunload", removeMessageListener);
-
     }
 
     closeEnclave(){
@@ -175,6 +171,9 @@ export class Heimdall{
                 break;
             case "pageLoaded":
                 break;
+            case "iframeClosed":
+                this.removeMessageListener();
+                return {ok: true, message: "Approval enclave closed."}
             default:
                 throw Error("Expected type of " + enclaveResponse.type + " is not part of types we can process");
         }
