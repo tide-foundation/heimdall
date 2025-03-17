@@ -22,6 +22,7 @@ export class Heimdall{
      * @param {string[]} acceptedAdminIds 
      */
     constructor(authorizedOrkURL, acceptedAdminIds){
+        this.handler = null;
         this.authorizedOrkURL = authorizedOrkURL;
         this.authorizedOrkOrigin = new URL(this.authorizedOrkURL).origin;
         this.enclaveWindow = undefined;
@@ -57,7 +58,6 @@ export class Heimdall{
         document.body.appendChild(button); // add button to page
         return button;
     }
-    
 
     async sayHello(){
         const pre_response = this.waitForMessage("hello");
@@ -108,13 +108,11 @@ export class Heimdall{
 
     async openEnclave(){
         this.enclaveWindow = window.open(this.getFullAuthorizedOrkUrl(), new Date().getTime(), 'width=800,height=800'); // is date correct to use here??????????????????????????????????????????
-        await this.waitForMessage("pageLoaded"); // we need to wait for the page to load before we send sensitive data
+        await this.waitForMessage("pageLoaded"); // we need to wait for the page to load before we send sensitive dat
 
-        // Immediately reemove message event listener on manual close 
-        this.enclaveWindow.addEventListener("beforeunload", () => {
-            window.removeEventListener("message", handler);
-        });
-  
+        // Immediately remove message event listener on manual close 
+        this.enclaveWindow.addEventListener("beforeunload", removeMessageListener);
+
     }
 
     closeEnclave(){
@@ -123,17 +121,24 @@ export class Heimdall{
 
     async waitForMessage(responseTypeToAwait) {
         return new Promise((resolve) => {
-            const handler = (event) => {
+            this.handler = (event) => {
                 const response = this.processEvent(event.data, event.origin, responseTypeToAwait);
                 if(response.ok){
                     resolve(response.message);
-                    window.removeEventListener("message", handler);
+                    window.removeEventListener("message", this.handler);
                 }else{
                     console.log(response.error);
                 }
             };
-            window.addEventListener("message", handler, false);
+            window.addEventListener("message", this.handler, false);
         });
+    }
+
+    removeMessageListener() {
+        if (this.handler !== null) {
+            window.removeEventListener("message", this.handler);
+            this.handler = null; // Reset handler reference
+        }
     }
 
     sendMessage(message){
