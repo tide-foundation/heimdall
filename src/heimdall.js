@@ -15,13 +15,13 @@
 // If not, see https://tide.org/licenses_tcoc2-0-0-en
 //
 
-export class Heimdall{
+export class Heimdall {
     /**
      * 
      * @param {string} authorizedOrkURL 
      * @param {string[]} acceptedAdminIds 
      */
-    constructor(authorizedOrkURL, acceptedAdminIds){
+    constructor(authorizedOrkURL, acceptedAdminIds) {
         this.authorizedOrkURL = authorizedOrkURL;
         this.authorizedOrkOrigin = new URL(this.authorizedOrkURL).origin;
         this.enclaveWindow = undefined;
@@ -30,27 +30,27 @@ export class Heimdall{
         this.acceptedAdminIds = acceptedAdminIds;
     }
 
-    getFullAuthorizedOrkUrl(){
+    getFullAuthorizedOrkUrl() {
         const u = new URL(this.authorizedOrkURL);
         u.searchParams.set("type", "approval");
         u.searchParams.set("acceptedIds", JSON.stringify(this.acceptedAdminIds));
         return this.authorizedOrkOrigin + u.pathname + u.search;
     }
 
-    AddTideButton(tideButtonAction, actionParameter=null){ // action parameter can be null for PerformTideAuth 1 Step
+    AddTideButton(tideButtonAction, actionParameter = null) { // action parameter can be null for PerformTideAuth 1 Step
         const button = document.createElement('button');
-      
+
         //button styling
         button.textContent = "";
-        button.innerHTML='<img src ="https://tide.org/assets/images/logo-tide-white.png"/>';
-        button.type="image";
-        button.style.background="orange";
-        button.style.color="white";
-        button.style.fontSize="13px";
-        button.style.padding="6px 40px";
-        button.style.borderColor="white";
-        button.style.borderRadius="6px";
-      
+        button.innerHTML = '<img src ="https://tide.org/assets/images/logo-tide-white.png"/>';
+        button.type = "image";
+        button.style.background = "orange";
+        button.style.color = "white";
+        button.style.fontSize = "13px";
+        button.style.padding = "6px 40px";
+        button.style.borderColor = "white";
+        button.style.borderRadius = "6px";
+
         button.addEventListener('click', async () => {
             tideButtonAction(actionParameter);
         });
@@ -58,7 +58,7 @@ export class Heimdall{
         return button;
     }
 
-    async sayHello(){
+    async sayHello() {
         const pre_response = this.waitForMessage("hello");
 
         this.sendMessage({
@@ -70,7 +70,7 @@ export class Heimdall{
         console.log(response);
     }
 
-    async getAuthorizerApproval(draftToApprove, modelId, expiry, encoding="bytes"){
+    async getAuthorizerApproval(draftToApprove, modelId, expiry, encoding = "bytes", authflow = "") {
         // ready to accept reply
         const pre_response = this.waitForMessage("approval");
 
@@ -83,7 +83,8 @@ export class Heimdall{
                     encoding: encoding
                 },
                 modelId: modelId,
-                expiry: expiry
+                expiry: expiry,
+                authflow: authflow
             }
         });
 
@@ -91,7 +92,7 @@ export class Heimdall{
         return await pre_response;
     }
 
-    async getAuthorizerAuthentication(){
+    async getAuthorizerAuthentication() {
         // ready to accept reply
         const pre_response = this.waitForMessage("authentication");
 
@@ -105,12 +106,12 @@ export class Heimdall{
         return await pre_response;
     }
 
-    async openEnclave(){
+    async openEnclave() {
         this.enclaveWindow = window.open(this.getFullAuthorizedOrkUrl(), new Date().getTime(), 'width=800,height=800'); // is date correct to use here??????????????????????????????????????????
         await this.waitForMessage("pageLoaded"); // we need to wait for the page to load before we send sensitive data
     }
 
-    closeEnclave(){
+    closeEnclave() {
         this.enclaveWindow.close();
     }
 
@@ -118,10 +119,10 @@ export class Heimdall{
         return new Promise((resolve) => {
             const handler = (event) => {
                 const response = this.processEvent(event.data, event.origin, responseTypeToAwait);
-                if(response.ok){
+                if (response.ok) {
                     resolve(response.message);
                     window.removeEventListener("message", handler);
-                }else{
+                } else {
                     console.log(response.error);
                 }
             };
@@ -129,7 +130,7 @@ export class Heimdall{
         });
     }
 
-    sendMessage(message){
+    sendMessage(message) {
         this.enclaveWindow.postMessage(message, this.authorizedOrkOrigin);
     }
     /**
@@ -138,10 +139,10 @@ export class Heimdall{
      * @param {string} origin
      * @param {string} expectedType
     */
-    processEvent(data, origin, expectedType){
+    processEvent(data, origin, expectedType) {
         if (origin !== this.authorizedOrkOrigin) {
             // Something's not right... The message has come from an unknown domain... 
-            return {ok: false, error: "WRONG WINDOW SENT MESSAGE"};
+            return { ok: false, error: "WRONG WINDOW SENT MESSAGE" };
         }
         const enclaveResponse = data;
 
@@ -166,8 +167,8 @@ export class Heimdall{
         }
 
         // perform line below as there are some listeners that heimdall requires to function properyl such as newORKUrl
-        if(expectedType !== enclaveResponse.type) return {ok: false, error: "Received " + enclaveResponse.type + " but waiting for " + expectedType};
+        if (expectedType !== enclaveResponse.type) return { ok: false, error: "Received " + enclaveResponse.type + " but waiting for " + expectedType };
 
-        return {ok: true, message: response}
+        return { ok: true, message: response }
     }
 }
