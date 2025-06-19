@@ -3,14 +3,10 @@ import { TideMemory } from "../wrapper";
 
 interface HiddenInit{
     doken: string;
-    signed_origin: string;
-    voucherURL: string;
 }
 
 export class RequestEnclave extends Heimdall<RequestEnclave>{
-    private signed_client_origin: string;
     private doken: string;
-    private voucherURL: string;
 
     _windowType: windowType = windowType.Hidden;
 
@@ -18,13 +14,9 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     private requestEnclaveHidden: boolean = true;
 
     init(data: HiddenInit): RequestEnclave {
-        if(!data.signed_origin) throw 'Must supply signed origin for wherever youre running this client';
         if(!data.doken) throw 'Doken not provided';
-        if(!data.voucherURL) throw 'No voucher url provided';
 
-        this.signed_client_origin = data.signed_origin;
         this.doken = data.doken;
-        this.voucherURL = data.voucherURL;
 
         this.recieve("hidden enclave").then((data) => this.handleHiddenEnclaveResponse(data));
 
@@ -33,8 +25,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
                 this.initDone = this.recieve("init done");
                 this.send({
                     type: "init",
-                    doken: this.doken,
-                    voucher: this.voucherURL
+                    doken: this.doken
                 });
             }else throw 'Error opening enclave';
         });
@@ -59,8 +50,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
                     this.initDone = this.recieve("init done");
                     this.send({
                         type: "init",
-                        doken: this.doken,
-                        voucher: this.voucherURL
+                        doken: this.doken
                     });
                 }else throw 'Error opening enclave';
             })
@@ -69,19 +59,26 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         this.recieve("hidden enclave").then((data) => this.handleHiddenEnclaveResponse(data));
     }
 
-    getOrkUrl(data: any): URL {
-        // this
+    getOrkUrl(): URL {
+        // construct ork url
+        const url = new URL(this.enclaveOrigin);
 
+        // Set hidden status
+        url.searchParams.set("hidden", this.requestEnclaveHidden ? "true" : "false");
 
+        // Set vendor public
+        url.searchParams.set("vendorPublic", this.vendorPublic);
 
-        // is very fucked up and note done
+        // Set client origin
+        url.searchParams.set("origin", encodeURIComponent(window.location.origin));
 
-        // and where do we get voucher url from????
-        // how do we construct it
+        // Set client origin signature (by vendor)
+        url.searchParams.set("originsig", encodeURIComponent(this.signed_client_origin));
 
-        // you need to put client origin in here
-        this.enclaveUrl.searchParams.set("hidden", this.requestEnclaveHidden ? "true" : "false");
-        return this.enclaveUrl;
+        // Set voucher url
+        url.searchParams.set("voucherURL", encodeURIComponent(this.voucherURL));
+
+        return url;
     }
 
     async execute(data: TideMemory): Promise<Uint8Array[]>{

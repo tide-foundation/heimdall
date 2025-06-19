@@ -45,10 +45,10 @@ export class ApprovalEnclaveFlow extends Heimdall<ApprovalEnclaveFlow>{
         return await pre_response;
     }
 
-    getOrkUrl(data: any) { 
+    getOrkUrl() { 
         throw new Error('Not implemented');
         // how to create approval ork url for openinging enclave?
-        const u = new URL(data);
+        const u = new URL("data");
         u.searchParams.set("type", "approval");
         u.searchParams.set("acceptedIds", JSON.stringify(this.acceptedAdminIds));
         return new URL(this.enclaveOrigin + u.pathname + u.search);

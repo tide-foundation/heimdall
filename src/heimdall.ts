@@ -14,24 +14,34 @@
 // Code License along with this program.
 // If not, see https://tide.org/licenses_tcoc2-0-0-en
 //
-
+export interface HeimdallConstructor{
+    vendorPublic: string;
+    homeOrkOrigin: string,
+    voucherURL: string,
+    signed_client_origin: string;
+}
 export abstract class Heimdall<T> implements EnclaveFlow<T> {
     name: string;
     _windowType: windowType;
-    enclaveUrl: URL;
     enclaveOrigin: string;
-
+    voucherURL: string;
+    signed_client_origin: string;
+    vendorPublic: string;
+    
     private enclaveWindow: WindowProxy;
 
-    constructor(homeOrkOrigin: string){
-        this.enclaveOrigin = homeOrkOrigin; // for child classes to make their enclave urls
+    constructor(init: HeimdallConstructor){
+        this.enclaveOrigin = init.homeOrkOrigin; 
+        this.voucherURL = init.voucherURL;
+        this.signed_client_origin = init.signed_client_origin;
+        this.vendorPublic = init.vendorPublic;
     }
 
     init(data: any): T {
         throw new Error("Method not implemented.");
     }
 
-    getOrkUrl(data: any): URL {
+    getOrkUrl(): URL {
         throw new Error("Method not implemented.");
     }
 
@@ -82,7 +92,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
 
     private async openPopUp(): Promise<boolean> {
         const left_pos = (window.length / 2) - 400;
-        const w = window.open(this.enclaveUrl, "_blank", `width=800,height=800,left=${left_pos}`);
+        const w = window.open(this.getOrkUrl(), "_blank", `width=800,height=800,left=${left_pos}`);
         if(!w) return false;
         this.enclaveWindow = w;
         await this.waitForWindowPostMessage("pageLoaded"); // we need to wait for the page to load before we send sensitive data
@@ -109,11 +119,11 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     }
 
     private sendPostWindowMessage(message: any) {
-        this.enclaveWindow.postMessage(message, this.enclaveUrl.origin);
+        this.enclaveWindow.postMessage(message, this.enclaveOrigin);
     }
 
     private processEvent(data: any, origin: string, expectedType: string){
-        if (origin !== this.enclaveUrl.origin) {
+        if (origin !== this.enclaveOrigin) {
             // Something's not right... The message has come from an unknown domain... 
             return {ok: false, error: "WRONG WINDOW SENT MESSAGE"};
         }
@@ -140,7 +150,6 @@ export enum windowType{
 interface EnclaveFlow<T>{
     name: string;
     _windowType: windowType;
-    enclaveUrl: URL;
 
     init(data: any): T;
     open(): Promise<boolean>;
@@ -150,5 +159,5 @@ interface EnclaveFlow<T>{
 
     onerror(data: any): void;
 
-    getOrkUrl(data: any): URL;
+    getOrkUrl(): URL;
 };
