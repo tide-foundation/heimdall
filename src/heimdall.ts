@@ -45,24 +45,26 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
         throw new Error("Method not implemented.");
     }
 
-    async open() {
+    async open(): Promise<boolean> {
         switch(this._windowType){
             case windowType.Popup:
                 return this.openPopUp();
             case windowType.Redirect:
                 throw new Error("Method not implemented.");
             case windowType.Hidden:
-                throw new Error("Method not implemented.");
+                return this.openHiddenIframe();
         }
     }
-    send(data: any): Promise<boolean> {
+    send(data: any): void {
         switch(this._windowType){
             case windowType.Popup:
                 this.sendPostWindowMessage(data);
+                break;
             case windowType.Redirect:
                 throw new Error("Method not implemented.");
             case windowType.Hidden:
-                throw new Error("Method not implemented.");
+                this.sendPostWindowMessage(data);
+                break;
         }
     }
     async recieve(type: string): Promise<any> {
@@ -72,7 +74,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
             case windowType.Redirect:
                 throw new Error("Method not implemented.");
             case windowType.Hidden:
-                throw new Error("Method not implemented.");
+                return this.waitForWindowPostMessage(type);
         }
     }
     close() {
@@ -96,6 +98,26 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
         if(!w) return false;
         this.enclaveWindow = w;
         await this.waitForWindowPostMessage("pageLoaded"); // we need to wait for the page to load before we send sensitive data
+        return true;
+    }
+
+    private async openHiddenIframe() {
+        // 1. Create the iframe
+        const iframe = document.createElement('iframe');
+        iframe.src = this.getOrkUrl().toString();          
+        iframe.style.display = 'none';          // hide it visually
+        iframe.setAttribute('aria-hidden', 'true'); // accessibility hint
+
+        // 2. Add it to the document
+        document.body.appendChild(iframe);
+
+        // 3. Keep a reference to its window for postMessage
+        this.enclaveWindow = iframe.contentWindow;
+        if (!this.enclaveWindow) return false;
+
+        // 4. Wait for the iframe to signal it’s ready
+        await this.waitForWindowPostMessage("pageLoaded");
+
         return true;
     }
 
@@ -153,7 +175,7 @@ interface EnclaveFlow<T>{
 
     init(data: any): T;
     open(): Promise<boolean>;
-    send(data: any): Promise<boolean>;
+    send(data: any): void;
     recieve(type: string): Promise<any>;
     close(): void;
 
