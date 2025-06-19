@@ -8,11 +8,13 @@ export class ApprovalEnclaveFlow extends Heimdall<ApprovalEnclaveFlow>{
     enclaveUrl: URL;
 
     init(data: string[]): ApprovalEnclaveFlow {
+        throw new Error('Not implemented');
         this.acceptedAdminIds = data;
         return this;
     }
 
     async getAuthorizerAuthentication() {
+        throw new Error('Not implemented');
         // ready to accept reply
         const pre_response = this.recieve("authentication");
 
@@ -28,6 +30,7 @@ export class ApprovalEnclaveFlow extends Heimdall<ApprovalEnclaveFlow>{
 
     
     async getAuthorizerApproval(data: TideMemory) {
+        throw new Error('Not implemented');
         // ready to accept reply
         const pre_response = this.recieve("approval");
 
@@ -43,6 +46,7 @@ export class ApprovalEnclaveFlow extends Heimdall<ApprovalEnclaveFlow>{
     }
 
     getOrkUrl(data: any) { 
+        throw new Error('Not implemented');
         // how to create approval ork url for openinging enclave?
         const u = new URL(data);
         u.searchParams.set("type", "approval");
