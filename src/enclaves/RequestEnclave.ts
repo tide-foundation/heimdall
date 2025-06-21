@@ -93,4 +93,39 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         if(!resp.data.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
         return resp.data;
     }
+    async decrypt(data: decryptRequest): Promise<Uint8Array[]>{
+        await this.initDone;
+        const pre_resp = this.recieve("decrypt request completed");
+        this.send({
+            type: "request",
+            flow: "decrypt",
+            request: data,
+        })
+        const resp = await pre_resp;
+        if(!Array.isArray(resp.data)) throw 'Expecting request completed data to be an array';
+        if(!resp.data.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
+        return resp.data;
+    }
+    async encrypt(data: encryptRequest): Promise<Uint8Array[]>{
+        await this.initDone;
+        const pre_resp = this.recieve("encrypt request completed");
+        this.send({
+            type: "request",
+            flow: "encrypt",
+            request: data,
+        })
+        const resp = await pre_resp;
+        if(!Array.isArray(resp.data)) throw 'Expecting request completed data to be an array';
+        if(!resp.data.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
+        return resp.data;
+    }
+}
+
+interface decryptRequest{
+    encrypted: Uint8Array;
+    tags: string[]
+}
+interface encryptRequest{
+    data: Uint8Array;
+    tags: string[]
 }
