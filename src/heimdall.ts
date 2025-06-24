@@ -37,10 +37,6 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
         this.vendorPublic = init.vendorPublic;
     }
 
-    init(data: any): T {
-        throw new Error("Method not implemented.");
-    }
-
     getOrkUrl(): URL {
         throw new Error("Method not implemented.");
     }
@@ -173,7 +169,6 @@ interface EnclaveFlow<T>{
     name: string;
     _windowType: windowType;
 
-    init(data: any): T;
     open(): Promise<boolean>;
     send(data: any): void;
     recieve(type: string): Promise<any>;

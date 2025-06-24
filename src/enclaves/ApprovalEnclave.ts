@@ -7,14 +7,13 @@ export class ApprovalEnclaveFlow extends Heimdall<ApprovalEnclaveFlow>{
     private acceptedAdminIds: string[];
     enclaveUrl: URL;
 
-    init(data: string[]): ApprovalEnclaveFlow {
-        throw new Error('Not implemented');
+    init(data: string[], enclaveUrl: string): ApprovalEnclaveFlow {
         this.acceptedAdminIds = data;
+        this.enclaveUrl = new URL(enclaveUrl);
         return this;
     }
 
     async getAuthorizerAuthentication() {
-        throw new Error('Not implemented');
         // ready to accept reply
         const pre_response = this.recieve("authentication");
 
@@ -29,16 +28,22 @@ export class ApprovalEnclaveFlow extends Heimdall<ApprovalEnclaveFlow>{
     }
 
     
-    async getAuthorizerApproval(data: TideMemory) {
-        throw new Error('Not implemented');
+    async getAuthorizerApproval(draftToApprove, modelId, expiry, encoding = "bytes", authflow = "") {
         // ready to accept reply
         const pre_response = this.recieve("approval");
 
         // send to enclave
         this.send({
             type: "approval",
-            version: "0.0.1",
-            message: data
+            message: {
+                draftToAuthorize: {
+                    data: draftToApprove,
+                    encoding: encoding
+                },
+                modelId: modelId,
+                expiry: expiry,
+                authflow: authflow
+            }
         });
 
         // wait for response - this does not mean that enclave it closed, just that the admin has responded to the approval request from the enclave
@@ -46,7 +51,6 @@ export class ApprovalEnclaveFlow extends Heimdall<ApprovalEnclaveFlow>{
     }
 
     getOrkUrl() { 
-        throw new Error('Not implemented');
         // how to create approval ork url for openinging enclave?
         const u = new URL("data");
         u.searchParams.set("type", "approval");

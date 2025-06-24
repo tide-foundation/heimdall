@@ -83,9 +83,10 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
 
     async execute(data: TideMemory): Promise<Uint8Array[]>{
         await this.initDone;
-        const pre_resp = this.recieve("request completed");
+        const pre_resp = this.recieve("sign request completed");
         this.send({
             type: "request",
+            flow: "sign",
             request: data,
         })
         const resp = await pre_resp;

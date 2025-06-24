@@ -1,6 +1,6 @@
 export const version = "1";
 
-export function wrapper(arr: NestedUint8ArrayBinary): TideMemory {
+export function wrapper(arr: NestedEntry): TideMemory {
     // If array is only Uint8Arrays - create a TideMemory out of it 
     // If there is any entry in an array that is another array
     //     -> Go inside that array and repeat the process
@@ -10,8 +10,27 @@ export function wrapper(arr: NestedUint8ArrayBinary): TideMemory {
         arr.forEach((a) => {
             // If the entry is an array, apply the wappa on it
             if(Array.isArray(a)){
-                // Reassign the value of the entry -> to the serialized wappa
+                // Reassign the value of the entry -> to the serialized wrapper
                 a = wrapper(a);
+            }else if(a["value"]){
+                // Let's check if is a number, boolean or Uint8Array. If none of those, it'll be null
+                const res = encode(a["value"]);
+                if(res){
+                    // serialized correctly
+                    a = res;
+                }else{
+                    if(typeof a["value"] == "string"){
+                        // Serialize it into Uint8Array
+                        if(!a["encoding"]){
+                            // No encoding provided
+                            // Let's default to UTF-8
+                            a = encodeStr(a["value"], "UTF-8");
+                        }else{
+                            a = encodeStr(a["value"], a["encoding"]);
+                        }
+                    }
+                    else throw 'Unsupported type';
+                }
             }
         })
         if(arr.every(a => a instanceof Uint8Array)) return TideMemory.CreateFromArray(arr); // Check to make sure everything was serialized correctly from the wappa
@@ -19,11 +38,11 @@ export function wrapper(arr: NestedUint8ArrayBinary): TideMemory {
     }
 }
 
-export function encodeStr(str: string, enc: encoding): Uint8Array {
+export function encodeStr(str: string, enc: string): Uint8Array {
     switch(enc){
-        case encoding.UTF8:
+        case "UTF-8":
             return new TextEncoder().encode(str);
-        case encoding.HEX:
+        case "HEX":
             // 1) Strip 0x prefix
             let normalized = str.replace(/^0x/i, "");
 
@@ -50,7 +69,7 @@ export function encodeStr(str: string, enc: encoding): Uint8Array {
             }
 
             return out;
-        case encoding.B64:
+        case "B64":
             const binaryString = atob(str);
             const len = binaryString.length;
             const bytes = new Uint8Array(len);
@@ -58,7 +77,7 @@ export function encodeStr(str: string, enc: encoding): Uint8Array {
                 bytes[i] = binaryString.charCodeAt(i);
             }
             return bytes;
-        case encoding.B64URL:
+        case "B64URL":
             // 1) Replace URL-safe chars with standard Base64 chars
             let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
 
@@ -85,11 +104,11 @@ export function encodeStr(str: string, enc: encoding): Uint8Array {
             return ubytes;
         default:
             // catches anything else (should never happen)
-            throw new TypeError(`Unsupported encoding: ${typeof enc}`);
+            throw new TypeError(`Unsupported encoding: ${enc}`);
     }
 }
 
-export function encode(data: number | boolean | Uint8Array): Uint8Array {
+export function encode(data: number | boolean | Uint8Array): Uint8Array | undefined {
     switch (typeof data) {
     case 'number':
         const buffer = new ArrayBuffer(4);
@@ -110,18 +129,16 @@ export function encode(data: number | boolean | Uint8Array): Uint8Array {
 
     default:
       // catches anything else (should never happen)
-      throw new TypeError(`Unsupported type: ${typeof data}`);
+      return undefined;
   }
 }
 
-type NestedUint8ArrayBinary = (Uint8Array | NestedUint8ArrayBinary)[];
-
-enum encoding{
-    UTF8,
-    HEX,
-    B64,
-    B64URL
+interface entry{
+    value: any;
+    encoding?: string;
 }
+type NestedEntry = (entry | Uint8Array | NestedEntry)[]; // added Uint8Array as an optional type so we can serialize it without deep copy
+
 
 // Tide Memory Object helper functions from tide-js
 export class TideMemory extends Uint8Array{
