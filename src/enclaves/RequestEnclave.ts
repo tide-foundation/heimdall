@@ -3,10 +3,12 @@ import { TideMemory } from "../wrapper";
 
 interface HiddenInit{
     doken: string;
+    dokenRefreshCallback: () => Promise<string> | undefined;
 }
 
 export class RequestEnclave extends Heimdall<RequestEnclave>{
     private doken: string;
+    private dokenRefreshCallback: () => Promise<string> | undefined;
 
     _windowType: windowType = windowType.Hidden;
 
@@ -17,6 +19,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         if(!data.doken) throw 'Doken not provided';
 
         this.doken = data.doken;
+        this.dokenRefreshCallback = data.dokenRefreshCallback;
 
         this.recieve("hidden enclave").then((data) => this.handleHiddenEnclaveResponse(data));
 
@@ -67,7 +70,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         url.searchParams.set("hidden", this.requestEnclaveHidden ? "true" : "false");
 
         // Set vendor public
-        url.searchParams.set("vendorPublic", this.vendorPublic);
+        url.searchParams.set("vendorId", this.vendorId);
 
         // Set client origin
         url.searchParams.set("origin", encodeURIComponent(window.location.origin));
@@ -119,6 +122,24 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         if(!Array.isArray(resp.data)) throw 'Expecting request completed data to be an array';
         if(!resp.data.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
         return resp.data;
+    }
+
+    async onerror(data: any) {
+        if(typeof data.message === "string"){
+            switch(data.message){
+                case "expired":
+                    if(!this.dokenRefreshCallback){
+                        console.error("[HEIMDALL] Doken on enclave has expired but there is no Doken Refresh Callback registered");
+                        return;
+                    }
+                    this.doken = await this.dokenRefreshCallback();
+                    this.send({
+                        type: "doken refresh",
+                        doken: this.doken
+                    });
+                    break;
+            }
+        }
     }
 }
 
