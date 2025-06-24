@@ -32,6 +32,7 @@ export function wrapper(arr: NestedEntry): TideMemory {
                     else throw 'Unsupported type';
                 }
             }
+            else throw 'Unexpected format';
         })
         if(arr.every(a => a instanceof Uint8Array)) return TideMemory.CreateFromArray(arr); // Check to make sure everything was serialized correctly from the wappa
         else throw 'There was an error encoding all your values';
