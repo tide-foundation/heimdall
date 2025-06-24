@@ -13,9 +13,13 @@
 // You should have received a copy of the Tide Community Open 
 // Code License along with this program.
 // If not, see https://tide.org/licenses_tcoc2-0-0-en
+
+import { ApprovalEnclaveFlow } from "./enclaves/ApprovalEnclave";
+import { RequestEnclave } from "./enclaves/RequestEnclave";
+
 //
 export interface HeimdallConstructor{
-    vendorPublic: string;
+    vendorId: string;
     homeOrkOrigin: string,
     voucherURL: string,
     signed_client_origin: string;
@@ -26,7 +30,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     enclaveOrigin: string;
     voucherURL: string;
     signed_client_origin: string;
-    vendorPublic: string;
+    vendorId: string;
     
     private enclaveWindow: WindowProxy;
 
@@ -34,7 +38,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
         this.enclaveOrigin = init.homeOrkOrigin; 
         this.voucherURL = init.voucherURL;
         this.signed_client_origin = init.signed_client_origin;
-        this.vendorPublic = init.vendorPublic;
+        this.vendorId = init.vendorId;
     }
 
     getOrkUrl(): URL {
@@ -178,3 +182,6 @@ interface EnclaveFlow<T>{
 
     getOrkUrl(): URL;
 };
+
+export { ApprovalEnclaveFlow as ApprovalEnclave} from "./enclaves/ApprovalEnclave";
+export { RequestEnclave }
