@@ -1,19 +1,21 @@
 import {Heimdall, windowType} from "../heimdall";
-import { TideMemory } from "../wrapper";
 
-export class ApprovalEnclaveFlow extends Heimdall<ApprovalEnclaveFlow>{
+export class ApprovalEnclave extends Heimdall<ApprovalEnclave>{
     name: string = "approval";
     _windowType: windowType = windowType.Popup;
     private acceptedAdminIds: string[];
     enclaveUrl: URL;
+    private initDone: Promise<any>;
 
-    init(data: string[], enclaveUrl: string): ApprovalEnclaveFlow {
+    init(data: string[], enclaveUrl: string): ApprovalEnclave {
         this.acceptedAdminIds = data;
         this.enclaveUrl = new URL(enclaveUrl);
+        this.initDone = this.open();
         return this;
     }
 
     async getAuthorizerAuthentication() {
+        await this.initDone;
         // ready to accept reply
         const pre_response = this.recieve("authentication");
 
@@ -29,6 +31,7 @@ export class ApprovalEnclaveFlow extends Heimdall<ApprovalEnclaveFlow>{
 
     
     async getAuthorizerApproval(draftToApprove, modelId, expiry, encoding = "bytes", authflow = "") {
+        await this.initDone;
         // ready to accept reply
         const pre_response = this.recieve("approval");
 
@@ -52,10 +55,9 @@ export class ApprovalEnclaveFlow extends Heimdall<ApprovalEnclaveFlow>{
 
     getOrkUrl() { 
         // how to create approval ork url for openinging enclave?
-        const u = new URL("data");
-        u.searchParams.set("type", "approval");
-        u.searchParams.set("acceptedIds", JSON.stringify(this.acceptedAdminIds));
-        return new URL(this.enclaveOrigin + u.pathname + u.search);
+        this.enclaveUrl.searchParams.set("type", "approval");
+        this.enclaveUrl.searchParams.set("acceptedIds", JSON.stringify(this.acceptedAdminIds));
+        return this.enclaveUrl;
     }
     
 }

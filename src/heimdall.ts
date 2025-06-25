@@ -14,8 +14,6 @@
 // Code License along with this program.
 // If not, see https://tide.org/licenses_tcoc2-0-0-en
 
-import { ApprovalEnclaveFlow } from "./enclaves/ApprovalEnclave";
-import { RequestEnclave } from "./enclaves/RequestEnclave";
 
 //
 export interface HeimdallConstructor{
@@ -45,7 +43,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
         throw new Error("Method not implemented.");
     }
 
-    async open(): Promise<boolean> {
+    public async open(): Promise<boolean> {
         switch(this._windowType){
             case windowType.Popup:
                 return this.openPopUp();
@@ -55,7 +53,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
                 return this.openHiddenIframe();
         }
     }
-    send(data: any): void {
+    public send(data: any): void {
         switch(this._windowType){
             case windowType.Popup:
                 this.sendPostWindowMessage(data);
@@ -67,7 +65,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
                 break;
         }
     }
-    async recieve(type: string): Promise<any> {
+    public async recieve(type: string): Promise<any> {
         switch(this._windowType){
             case windowType.Popup:
                 return this.waitForWindowPostMessage(type);
@@ -77,14 +75,17 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
                 return this.waitForWindowPostMessage(type);
         }
     }
-    close() {
+    public close() {
         switch(this._windowType){
             case windowType.Popup:
                 this.closePopupEnclave();
+                break;
             case windowType.Redirect:
                 throw new Error("Method not implemented.");
             case windowType.Hidden:
                 throw new Error("Method not implemented.");
+            default:
+                throw "Unknown window type";
         }
     }
 
@@ -182,6 +183,3 @@ interface EnclaveFlow<T>{
 
     getOrkUrl(): URL;
 };
-
-export { ApprovalEnclaveFlow as ApprovalEnclave} from "./enclaves/ApprovalEnclave";
-export { RequestEnclave }

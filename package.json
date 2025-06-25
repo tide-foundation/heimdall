@@ -1,10 +1,12 @@
 {
   "name": "heimdall-tide",
-  "version": "0.0.60",
+  "version": "0.1.0",
   "description": "SDK for communicating with a Tide Enclave",
-  "main": "./src/heimdall.js",
+  "main": "./dist/index.js",
+  "typings": "./dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
@@ -13,7 +15,7 @@
   "keywords": [
     "tide"
   ],
-  "author": "Julio Medeiros",
+  "author": "Tide",
   "license": "ISC",
   "types": "./heimdall.d.ts",
   "bugs": {
