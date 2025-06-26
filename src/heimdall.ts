@@ -83,7 +83,8 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
             case windowType.Redirect:
                 throw new Error("Method not implemented.");
             case windowType.Hidden:
-                throw new Error("Method not implemented.");
+                this.closeHiddenIframe();
+                break;
             default:
                 throw "Unknown window type";
         }
@@ -102,11 +103,21 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
         return true;
     }
 
+    private async closeHiddenIframe(){
+        window.document
+            .querySelectorAll<HTMLIFrameElement>('iframe#heimdall')
+            .forEach(iframe => iframe.remove());
+    }
+
     private async openHiddenIframe() {
+        // Remove any existing iframes with heimdall id
+        this.closeHiddenIframe();
+
         // 1. Create the iframe
         const iframe = document.createElement('iframe');
         iframe.src = this.getOrkUrl().toString();          
         iframe.style.display = 'none';          // hide it visually
+        iframe.id = "heimdall"; // in case multiple frames get popped up - we only want one
         iframe.setAttribute('aria-hidden', 'true'); // accessibility hint
 
         // 2. Add it to the document
@@ -134,7 +145,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
                     resolve(response.message);
                     window.removeEventListener("message", handler);
                 } else {
-                    console.log(response.error);
+                    if(response.print) console.error("[HEIMDALL] Recieved enclave error: " + response.error);
                 }
             };
             window.addEventListener("message", handler, false);
@@ -148,10 +159,8 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     private processEvent(data: any, origin: string, expectedType: string){
         if (origin !== this.enclaveOrigin) {
             // Something's not right... The message has come from an unknown domain... 
-            return {ok: false, error: "WRONG WINDOW SENT MESSAGE"};
+            return {ok: false, print: false, error: "WRONG WINDOW SENT MESSAGE"};
         }
-
-        if(expectedType !== data.type) return {ok: false, error: "Received " + data.type + " but waiting for " + expectedType};
 
         switch (data.type) {
             case "newORKUrl":
@@ -159,10 +168,16 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
                 break;
             case "error":
                 this.onerror(data);
-                break;
+                return {ok: false, print: false, error: "handled error"}
         }
 
-        return {ok: true, message: data.message}
+        if(expectedType !== data.type) {
+            console.log("[HEIMDALL] Received type{" + data.type + "} but waiting for type{" + expectedType + "}");
+            return {ok: false, print: false, error: "handled error"}
+        }else{
+            console.log("[HEIMDALL] Correctly received type{" + data.type + "}");
+            return {ok: true, message: data.message}
+        }
     }
 }
 export enum windowType{

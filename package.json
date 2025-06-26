@@ -2,11 +2,27 @@
   "name": "heimdall-tide",
   "version": "0.1.0",
   "description": "SDK for communicating with a Tide Enclave",
-  "main": "./dist/index.js",
-  "typings": "./dist/index.d.ts",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "typings": "dist/esm/index.d.ts",     
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    },
+    "./enclaves/ApprovalEnclave": {
+      "import": "./dist/esm/enclaves/ApprovalEnclave.js",
+      "require": "./dist/cjs/enclaves/ApprovalEnclave.js"
+    },
+    "./enclaves/RequestEnclave": {
+      "import": "./dist/esm/enclaves/RequestEnclave.js",
+      "require": "./dist/cjs/enclaves/RequestEnclave.js"
+    }
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "build": "npm run build:cjs && npm run build:esm"
   },
   "repository": {
     "type": "git",
