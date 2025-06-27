@@ -115,9 +115,9 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             }
         })
         const resp = await pre_resp;
-        if(!Array.isArray(resp.data)) throw 'Expecting request completed data to be an array, not' + resp;
-        if(!resp.data.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
-        return resp.data;
+        if(!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
+        if(!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
+        return resp;
     }
     async encrypt(data: encryptRequest): Promise<Uint8Array[]>{
         await this.initDone;
@@ -130,9 +130,9 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             }
         })
         const resp = await pre_resp;
-        if(!Array.isArray(resp.data)) throw 'Expecting request completed data to be an array, not' + resp;
-        if(!resp.data.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
-        return resp.data;
+        if(!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
+        if(!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
+        return resp;
     }
 
     async onerror(data: any) {
