@@ -39,6 +39,10 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
         this.vendorId = init.vendorId;
     }
 
+    enclaveClosed(){
+        return this.enclaveWindow.closed;
+    }
+
     getOrkUrl(): URL {
         throw new Error("Method not implemented.");
     }
