@@ -8,21 +8,15 @@ interface HiddenInit{
      */
     dokenRefreshCallback: () => Promise<string> | undefined;
     /**
-     * @param vendorData The encrypted data you have to send back to Tidecloak to update the TideAuthMsg with one with the newest session key
-     * @returns 
+     * @returns A function that re authenticates the current user from the client. (Used to update their session key on Identity System). Returns a new doken too.
      */
-    sessionKeyUpdatedCallback: (vendorData: string) => Promise<void> | undefined;
-    /**
-     * Returns GVRK Auth Pack + "." + Signature            I MADE IT A FUNCTION BECAUSE WE ONLY NEED TO CALL IT ON REQUEST ENCLAVE UI INSTANCIATION. PLUS IF SOMEONE KEEPS THERE BROWSER OPEN FOR LONGER THAN A MONTH THERE MAY BE A KEY MISMTACH HERE AND ON TIDECLAOK
-     */
-    vendorRotatingPublic: (rotatingPublic: string) => Promise<string>;
+    requireReloginCallback: () => Promise<string>;
 }
 
 export class RequestEnclave extends Heimdall<RequestEnclave>{
     private doken: string;
     private dokenRefreshCallback: () => Promise<string> | undefined;
-    private sessionKeyUpdatedCallback: (vendorData: string) => Promise<void> | undefined;
-    private vendorRotatingPublic: string;
+    private requireReloginCallback: () => Promise<string>;
 
     _windowType: windowType = windowType.Hidden;
 
@@ -32,9 +26,8 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         if(!data.doken) throw 'Doken not provided';
 
         this.doken = data.doken;
-        this.vendorRotatingPublic = data.vendorRotatingPublic;
         this.dokenRefreshCallback = data.dokenRefreshCallback;
-        this.sessionKeyUpdatedCallback = data.sessionKeyUpdatedCallback;
+        this.requireReloginCallback = data.requireReloginCallback;
 
         this.recieve("hidden enclave").then((data) => this.handleHiddenEnclaveResponse(data));
 
@@ -53,49 +46,56 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     }
 
     async handleHiddenEnclaveResponse(msg: any){
-        if(msg == "session key mismatch" && this._windowType == windowType.Hidden){
-            this.initDone = this.recieve("init done"); // await the REOPENED HIDDEN ENCLAVE INIT DONE SIGNAL
-            // looks like the hidden iframe has not allowed data to be stored on the browser OR the session key is mismatched with whats on the enclave vs doken
-            // either way we gotta get a doken with the appropriate session key
+        // Below is the session key mismatch flow that was implemented but then it was decided a basic relogin was more elegent
+        // Keeping it though because it is nearly identical to the flow where a tide user delegates a token to another tide user
+        // This would require the second tide user to sign a new delegated token with their current session key 
+        // This would be gold in a cvk scenario
+        // if(msg == "session key mismatch" && this._windowType == windowType.Hidden){
+        //     this.initDone = this.recieve("init done"); // await the REOPENED HIDDEN ENCLAVE INIT DONE SIGNAL
+        //     // looks like the hidden iframe has not allowed data to be stored on the browser OR the session key is mismatched with whats on the enclave vs doken
+        //     // either way we gotta get a doken with the appropriate session key
 
-            // Close the hidden enclave
-            this.close();
+        //     // Close the hidden enclave
+        //     this.close();
 
-            // We're now going to open the request enclave as a popup with the mismatched doken
-            // The page should recognise the doken is mismatched, generate a new one, then close
-            this._windowType = windowType.Popup;
+        //     // We're now going to open the request enclave as a popup with the mismatched doken
+        //     // The page should recognise the doken is mismatched, generate a new one, then close
+        //     this._windowType = windowType.Popup;
 
-            // open popup
-            await this.open();
-            // send doken to refresh
-            this.send({
-                type: "init",
-                message:{
-                    doken: this.doken
-                }
-            });
-            // wait for new doken
-            const resp = await this.recieve("refreshed doken"); 
-            this.doken = resp.doken;
-            if(this.sessionKeyUpdatedCallback) this.sessionKeyUpdatedCallback(resp.vendorData);
+        //     // open popup
+        //     await this.open();
+        //     // send doken to refresh
+        //     this.send({
+        //         type: "init",
+        //         message:{
+        //             doken: this.doken
+        //         }
+        //     });
+        //     // wait for new doken
+        //     const resp = await this.recieve("refreshed doken"); 
+        //     this.doken = resp.doken;
+        //     if(this.requireReloginCallback) this.requireReloginCallback();
 
-            // close pop up enclave
-            this.close();
+        //     // close pop up enclave
+        //     this.close();
 
-            // reset page to hidden iframe
-            this._windowType = windowType.Hidden;
-            // open hidden iframe
-            this.open().then((success: boolean) => {
-                if(success){
-                    this.send({
-                        type: "init",
-                        message: {
-                            doken: this.doken
-                        }
-                    });
-                }else throw 'Error opening enclave';
-            });
+        //     // reset page to hidden iframe
+        //     this._windowType = windowType.Hidden;
+        //     // open hidden iframe
+        //     this.open().then((success: boolean) => {
+        //         if(success){
+        //             this.send({
+        //                 type: "init",
+        //                 message: {
+        //                     doken: this.doken
+        //                 }
+        //             });
+        //         }else throw 'Error opening enclave';
+        //     });
 
+        // }
+        if(msg == "session key mismatch"){
+            this.requireReloginCallback(); // should initiate a full client page reload, killing this
         }
 
         this.recieve("hidden enclave").then((data) => this.handleHiddenEnclaveResponse(data));
