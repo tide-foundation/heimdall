@@ -192,6 +192,16 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         return resp;
     }
 
+    async updateDoken(doken: string){
+        this.doken = doken;
+        this.send({
+            type: "doken refresh",
+            message:{
+                doken: this.doken
+            }
+        });
+    }
+
     async onerror(data: any) {
         if(typeof data.message === "string"){
             switch(data.message){
