@@ -1,10 +1,28 @@
 {
   "name": "heimdall-tide",
-  "version": "0.0.60",
-  "description": "Allows for Integration with Tide",
-  "main": "./src/heimdall.js",
+  "version": "0.1.0",
+  "description": "SDK for communicating with a Tide Enclave",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "typings": "dist/esm/index.d.ts",     
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    },
+    "./enclaves/ApprovalEnclave": {
+      "import": "./dist/esm/enclaves/ApprovalEnclave.js",
+      "require": "./dist/cjs/enclaves/ApprovalEnclave.js"
+    },
+    "./enclaves/RequestEnclave": {
+      "import": "./dist/esm/enclaves/RequestEnclave.js",
+      "require": "./dist/cjs/enclaves/RequestEnclave.js"
+    }
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "build": "npm run build:cjs && npm run build:esm"
   },
   "repository": {
     "type": "git",
@@ -13,7 +31,7 @@
   "keywords": [
     "tide"
   ],
-  "author": "Julio Medeiros",
+  "author": "Tide",
   "license": "ISC",
   "types": "./heimdall.d.ts",
   "bugs": {
@@ -21,8 +39,6 @@
   },
   "homepage": "https://github.com/tide-foundation/heimdall#readme",
   "devDependencies": {
-    "@babel/cli": "^7.23.4",
-    "@babel/core": "^7.23.5",
-    "@babel/preset-env": "^7.23.5"
+    "typescript": "^5.8.3"
   }
 }
