@@ -1,0 +1,10 @@
+// tsconfig.esm.json
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "node10",
+    "outDir": "dist/esm"
+  },
+  "include": ["src"]
+}
