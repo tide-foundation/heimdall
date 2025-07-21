@@ -95,7 +95,23 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
 
         // }
         if(msg == "session key mismatch"){
+            this.close();
             this.requireReloginCallback(); // should initiate a full client page reload, killing this
+        }
+        else if(msg == "storage issue"){
+            // Convert hidden enclave into popup
+            this.close();
+            this._windowType = windowType.Popup;
+            this.open().then((success: boolean) => {
+                if(success){
+                    this.send({
+                        type: "init",
+                        message: {
+                            doken: this.doken
+                        }
+                    });
+                }else throw 'Error opening enclave';
+            });
         }
 
         this.recieve("hidden enclave").then((data) => this.handleHiddenEnclaveResponse(data));
