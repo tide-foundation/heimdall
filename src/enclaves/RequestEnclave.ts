@@ -110,7 +110,10 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
                             doken: this.doken
                         }
                     });
-                }else throw 'Error opening enclave';
+                }else{
+                    window.alert("There was an issue opening the fallback popup on this page. Please enable popups or let the administrator know about this problem. For more information, visit https://tide.org/browserwindow");
+                    throw "Could not open popup";
+                }
             });
         }
 
