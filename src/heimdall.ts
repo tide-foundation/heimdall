@@ -114,27 +114,49 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     }
 
     private async openHiddenIframe() {
-        // Remove any existing iframes with heimdall id
-        this.closeHiddenIframe();
+        try{
+            // Remove any existing iframes with heimdall id
+            this.closeHiddenIframe();
 
-        // 1. Create the iframe
-        const iframe = document.createElement('iframe');
-        iframe.src = this.getOrkUrl().toString();          
-        iframe.style.display = 'none';          // hide it visually
-        iframe.id = "heimdall"; // in case multiple frames get popped up - we only want one
-        iframe.setAttribute('aria-hidden', 'true'); // accessibility hint
+            // 1. Create the iframe
+            const iframe = document.createElement('iframe');
 
-        // 2. Add it to the document
-        document.body.appendChild(iframe);
+             // Create iframe error listener
+            const iframeErrorListener = new Promise<boolean>((res) => {
+                iframe.onerror = () => res(false);
+                iframe.addEventListener("error", () => {
+                    res(false); // failed to load
+                });
+            });
 
-        // 3. Keep a reference to its window for postMessage
-        this.enclaveWindow = iframe.contentWindow;
-        if (!this.enclaveWindow) return false;
+            iframe.src = this.getOrkUrl().toString();          
+            iframe.style.display = 'none';          // hide it visually
+            iframe.id = "heimdall"; // in case multiple frames get popped up - we only want one
+            iframe.setAttribute('aria-hidden', 'true'); // accessibility hint
 
-        // 4. Wait for the iframe to signal it’s ready
-        await this.waitForWindowPostMessage("pageLoaded");
+            // 2. Add it to the document
+            document.body.appendChild(iframe);
 
-        return true;
+            // 3. Keep a reference to its window for postMessage
+            this.enclaveWindow = iframe.contentWindow;
+            if (!this.enclaveWindow) return false;
+
+            // Create an iframe success listener
+            const pageLoaded = new Promise<boolean>(async (res) => {
+                await this.waitForWindowPostMessage("pageLoaded");
+                res(true); // page loaded
+            });
+
+            const timeout = new Promise<boolean>((resolve) => {
+                setTimeout(() => resolve(false), 2000); // 2-second timeout
+            });
+
+            const loadedResult = await Promise.race([iframeErrorListener, pageLoaded, timeout]);
+
+            return loadedResult;
+        }catch{
+            return false;
+        }
     }
 
     private closePopupEnclave() {
@@ -161,7 +183,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     }
 
     private processEvent(data: any, origin: string, expectedType: string){
-        if (origin !== this.enclaveOrigin) {
+        if (origin !== new URL(this.enclaveOrigin).origin) {
             // Something's not right... The message has come from an unknown domain... 
             return {ok: false, print: false, error: "WRONG WINDOW SENT MESSAGE"};
         }
