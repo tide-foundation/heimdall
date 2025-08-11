@@ -41,7 +41,21 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
                         doken: this.doken
                     }
                 });
-            }else throw 'Error opening enclave';
+            }else{
+                // If injecting iframe fails, try setting it as a popup and opening it
+                this._windowType = windowType.Popup;
+                this.open().then((success: boolean) => {
+                    if(success){
+                        this.send({
+                            type: "init",
+                            message: {
+                                doken: this.doken
+                            }
+                        });
+                    }
+                    else throw 'Error opening all types of Request Enclave';
+                });
+            }
         });
 
         return this;
