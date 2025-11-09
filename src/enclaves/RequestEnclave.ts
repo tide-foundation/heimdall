@@ -14,13 +14,13 @@ interface HiddenInit{
 }
 
 export class RequestEnclave extends Heimdall<RequestEnclave>{
-    private doken: string;
-    private dokenRefreshCallback: () => Promise<string> | undefined;
-    private requireReloginCallback: () => Promise<string>;
+    protected doken: string;
+    protected dokenRefreshCallback: () => Promise<string> | undefined;
+    protected requireReloginCallback: () => Promise<string>;
 
     _windowType: windowType = windowType.Hidden;
 
-    private initDone: Promise<any> = this.recieve("init done");
+    protected initDone: Promise<any> = this.recieve("init done");
 
     init(data: HiddenInit): RequestEnclave {
         if(!data.doken) throw 'Doken not provided';
