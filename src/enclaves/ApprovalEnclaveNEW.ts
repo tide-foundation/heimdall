@@ -1,4 +1,4 @@
-import {Heimdall, windowType} from "../heimdall";
+import {Heimdall, HiddenInit, windowType} from "../heimdall";
 import { TideMemory } from "../wrapper";
 import { RequestEnclave } from "./RequestEnclave";
 
@@ -6,11 +6,11 @@ export class ApprovalEnclaveNew extends RequestEnclave{
     name: string = "approvalNew";
     _windowType: windowType = windowType.Popup;
 
-    async initializeRequest(request: TideMemory){
-        return await super.execute(request);
+    init(data: HiddenInit): ApprovalEnclaveNew {
+        return super.init(data) as ApprovalEnclaveNew;
     }
     
-    async approve(requestsToApprove: RequestToApprove[]){
+    async approve(requestsToApprove: RequestToApprove[]) : Promise<OperatorApprovalResponse[]>{
         // return fully serialized approved requests
         this.checkEnclaveOpen();
         await this.initDone;
@@ -23,7 +23,8 @@ export class ApprovalEnclaveNew extends RequestEnclave{
         })
         const resp = await pre_resp; 
         if(!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
-        if(!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
+        if(!resp.every((d: any) => OperatorApprovalResponse.isOperatorApprovalResponse(d))) throw 'Expecting all entries in response to be OperatorApprovalResponse';
+        this.close();
         return resp;
     }
     
@@ -31,4 +32,20 @@ export class ApprovalEnclaveNew extends RequestEnclave{
 class RequestToApprove{
     id: string;
     request: TideMemory;
+}
+class OperatorApprovalResponse extends RequestToApprove{
+    status: Status;
+    static isOperatorApprovalResponse(object: any): object is OperatorApprovalResponse {
+        return (
+            object != null &&
+            typeof object.id === 'string' &&
+            object.request instanceof Uint8Array &&
+            Object.values(Status).includes(object.status)
+        );
+    }
+}
+enum Status{
+    Approved = "approved",
+    Denied = "denied",
+    Pending = "pending"
 }

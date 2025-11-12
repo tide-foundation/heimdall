@@ -1,19 +1,9 @@
-import { Heimdall, windowType } from "../heimdall";
+import BaseTideRequest from "../models/BaseTideRequest";
+import { Heimdall, HiddenInit, windowType } from "../heimdall";
 import { TideMemory } from "../wrapper";
 
-interface HiddenInit{
-    doken: string;
-    /**
-     * @returns A refresh doken for Heimdall
-     */
-    dokenRefreshCallback: () => Promise<string> | undefined;
-    /**
-     * @returns A function that re authenticates the current user from the client. (Used to update their session key on Identity System). Returns a new doken too.
-     */
-    requireReloginCallback: () => Promise<string>;
-}
-
 export class RequestEnclave extends Heimdall<RequestEnclave>{
+    name: string = "request";
     protected doken: string;
     protected dokenRefreshCallback: () => Promise<string> | undefined;
     protected requireReloginCallback: () => Promise<string>;
@@ -156,7 +146,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         url.searchParams.set("voucherURL", encodeURIComponent(this.voucherURL));
 
         // Set requestsed enclave
-        url.searchParams.set("type", "request");
+        url.searchParams.set("type", this.name);
 
         return url;
     }
@@ -176,6 +166,29 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
                 }else throw 'Error opening enclave';
             });
         }
+    }
+
+    async initializeRequest(request: TideMemory): Promise<Uint8Array>{
+        // construct request to sign this request's creation
+        const requestToInitialize = BaseTideRequest.decode(request);
+        const requestToInitializeDetails = await requestToInitialize.getRequestInitDetails();
+        const initRequest = new BaseTideRequest(
+            "TideRequestInitialization",
+            "1",
+            "Doken:1",
+            TideMemory.CreateFromArray([
+                requestToInitializeDetails.creationTime,
+                requestToInitializeDetails.expireTime,
+                requestToInitializeDetails.modelId,
+                requestToInitializeDetails.draftHash
+            ]),
+            new TideMemory()
+        );
+
+        const creationSig = (await this.execute(initRequest.encode()))[0];
+
+        // returns the same request provided except with the policy authorized creation datas included
+        return requestToInitialize.addCreationSignature(requestToInitializeDetails.creationTime, creationSig).encode();
     }
 
     async execute(data: TideMemory): Promise<Uint8Array[]>{

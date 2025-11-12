@@ -211,6 +211,17 @@ export enum windowType{
     Redirect,
     Hidden
 };
+export interface HiddenInit{
+    doken: string;
+    /**
+     * @returns A refresh doken for Heimdall
+     */
+    dokenRefreshCallback: () => Promise<string> | undefined;
+    /**
+     * @returns A function that re authenticates the current user from the client. (Used to update their session key on Identity System). Returns a new doken too.
+     */
+    requireReloginCallback: () => Promise<string>;
+}
 interface EnclaveFlow<T>{
     name: string;
     _windowType: windowType;

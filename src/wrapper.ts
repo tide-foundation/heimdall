@@ -144,7 +144,7 @@ type NestedEntry = (entry | Uint8Array | NestedEntry)[]; // added Uint8Array as 
 // Tide Memory Object helper functions from tide-js
 export class TideMemory extends Uint8Array{
     static CreateFromArray(datas: Uint8Array[]): TideMemory   {
-        const length = datas.reduce((sum, next) => sum + next.length, 0);
+        const length = datas.reduce((sum, next) => sum + 4 + next.length, 0);
         const mem = this.Create(datas[0], length);
         for(let i = 1; i < datas.length; i++){
             mem.WriteValue(i, datas[i]);
@@ -216,7 +216,7 @@ export class TideMemory extends Uint8Array{
         this.set(value, dataLocationIndex);
     }
 
-    GetValue<T extends Uint8Array>(index: number): T{
+    GetValue(index: number): TideMemory{
         // 'a' should be an ArrayBuffer or Uint8Array
         if (this.length < 4) {
             throw new Error("Insufficient data to read.");
@@ -253,6 +253,6 @@ export class TideMemory extends Uint8Array{
             throw new RangeError("Index out of range.");
         }
 
-        return this.subarray(dataLocationIndex, dataLocationIndex + finalDataLength) as T;
+        return this.subarray(dataLocationIndex, dataLocationIndex + finalDataLength) as TideMemory;
     }
 }
