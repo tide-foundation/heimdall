@@ -66,6 +66,11 @@ export default class BaseTideRequest {
         return this;
     }
 
+    addPolicy(policy: TideMemory){
+        this.policy = policy;
+        return this;
+    }
+
     async getRequestInitDetails() {
         const te = new TextEncoder();
         return {
