@@ -92,6 +92,23 @@ export default class BaseTideRequest {
         return this;
     }
 
+    isInitialized(): boolean {
+        try{
+            // check that creation time and sig fields are present
+            if(this.authorization.GetValue(0).GetValue(0).length > 0 && 
+                this.authorization.GetValue(0).GetValue(1).length == 64)
+                return true;
+        }catch {
+            return false;
+        }
+    }
+
+    getUniqueId(): string {
+        if(!this.isInitialized()) throw 'Must initialize request to generate unique id';
+        const bytes = this.authorization.GetValue(0).GetValue(1) as Uint8Array;
+        return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(''); // hex
+    }
+
     encode() {
         if (this.authorizer == null) throw Error("Authorizer not added to request");
         if (this.authorizerCert == null) throw Error("Authorizer cert not provided");
@@ -119,25 +136,26 @@ export default class BaseTideRequest {
         return req;
     }
 
-    static decode(data: TideMemory) {
+    static decode(data: Uint8Array) {
+        const d = data as TideMemory;
         // Read field 0 (name) - this is part of the TideMemory structure
-        const name = new TextDecoder().decode(data.GetValue(0));
+        const name = new TextDecoder().decode(d.GetValue(0));
 
         // Read all other fields
-        const version = new TextDecoder().decode(data.GetValue(1));
+        const version = new TextDecoder().decode(d.GetValue(1));
 
-        const expiry = BaseTideRequest.uint8ArrayToUint32LE(data.GetValue(2));
+        const expiry = BaseTideRequest.uint8ArrayToUint32LE(d.GetValue(2));
 
-        const draft = data.GetValue(3);
+        const draft = d.GetValue(3);
 
-        const authFlow = new TextDecoder().decode(data.GetValue(4));
+        const authFlow = new TextDecoder().decode(d.GetValue(4));
 
-        const dynamicData = data.GetValue(5);
+        const dynamicData = d.GetValue(5);
 
-        const authorizer = data.GetValue(6);
-        const authorization = data.GetValue(7);
-        const authorizerCert = data.GetValue(8);
-        const policy = data.GetValue(9);
+        const authorizer = d.GetValue(6);
+        const authorization = d.GetValue(7);
+        const authorizerCert = d.GetValue(8);
+        const policy = d.GetValue(9);
 
         // Create a new BaseTideRequest with the decoded data
         const request = new BaseTideRequest(name, version, authFlow, draft, dynamicData);
