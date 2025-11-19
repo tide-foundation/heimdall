@@ -255,4 +255,14 @@ export class TideMemory extends Uint8Array{
 
         return this.subarray(dataLocationIndex, dataLocationIndex + finalDataLength) as TideMemory;
     }
+
+    TryGetValue(index: number, returnObj: {result: Uint8Array | undefined}): boolean{
+        try{
+            returnObj.result = this.GetValue(index);
+            return true;
+        }catch{
+            returnObj.result = null;
+            return false;
+        }
+    }
 }

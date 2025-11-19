@@ -1,6 +1,10 @@
 import { TideMemory } from "../wrapper.js";
+import { Policy } from "./Policy.js";
 
 export default class BaseTideRequest {
+    static _name: string;
+    static _version: string;
+
     name: string;
     version: string;
     authFlow: string;
@@ -16,11 +20,16 @@ export default class BaseTideRequest {
         this.name = name;
         this.version = version;
         this.authFlow = authFlow
-        this.draft = draft.slice() as TideMemory;
-        this.dyanmicData = dyanmicData.slice() as TideMemory;
+
+        this.draft = new TideMemory(draft.length);
+        this.draft.set(draft);
+
+        this.dyanmicData = new TideMemory(dyanmicData.length);
+        this.dyanmicData.set(dyanmicData);
+
         this.authorization = new TideMemory();
         this.authorizerCert = new TideMemory();;
-        this.authorizer = new TideMemory();;
+        this.authorizer = new TideMemory();
         this.expiry = Math.floor(Date.now() / 1000) + 30; // default is 30s
         this.policy = new TideMemory();
     }
@@ -43,31 +52,36 @@ export default class BaseTideRequest {
         return r;
     }
 
-    setNewDynamicData(d: TideMemory) {
-        this.dyanmicData = d;
+    setNewDynamicData(d: Uint8Array) {
+        this.dyanmicData = new TideMemory(d.length);
+        this.dyanmicData.set(d);
         return this;
     }
 
     setCustomExpiry(timeFromNowInSeconds: number) {
-        this.expiry = timeFromNowInSeconds;
+        this.expiry = Math.floor(Date.now() / 1000) + timeFromNowInSeconds;
         return this;
     }
 
-    addAuthorizer(authorizer: TideMemory) {
-        this.authorizer = authorizer;
+    addAuthorizer(authorizer: Uint8Array) {
+        this.authorizer = new TideMemory(authorizer.length);
+        this.authorizer.set(authorizer);
     }
 
-    addAuthorizerCertificate(authorizerCertificate: TideMemory) {
-        this.authorizerCert = authorizerCertificate
+    addAuthorizerCertificate(authorizerCertificate: Uint8Array) {
+        this.authorizerCert = new TideMemory(authorizerCertificate.length);
+        this.authorizerCert.set(authorizerCertificate);
     }
 
-    addAuthorization(authorization: TideMemory) {
-        this.authorization = authorization
+    addAuthorization(authorization: Uint8Array) {
+        this.authorization = new TideMemory(authorization.length);
+        this.authorization.set(authorization);
         return this;
     }
 
-    addPolicy(policy: TideMemory){
-        this.policy = policy;
+    addPolicy(policy: Uint8Array){
+        this.policy = new TideMemory(policy.length);
+        this.policy.set(policy);
         return this;
     }
 
@@ -109,6 +123,24 @@ export default class BaseTideRequest {
         return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(''); // hex
     }
 
+    getInitializedTime(): number{
+        if(!this.isInitialized()) throw 'Must initialize request to get creation time';
+        const time_bytes = this.authorization.GetValue(0).GetValue(0);
+        return BaseTideRequest.uint8ArrayToUint32LE(time_bytes);
+    }
+
+    getCurrentApprovalCount(): number{
+        if(!this.isInitialized()) throw 'Must initialize request to get approval count';
+        let i = 0;
+        let res = {result: null};
+        while(this.authorizer.TryGetValue(i, res)){i++;}
+        return i;
+    }
+
+    getPolicy(): Policy{
+        return new Policy(this.policy);
+    }
+
     encode() {
         if (this.authorizer == null) throw Error("Authorizer not added to request");
         if (this.authorizerCert == null) throw Error("Authorizer cert not provided");
@@ -137,12 +169,19 @@ export default class BaseTideRequest {
     }
 
     static decode(data: Uint8Array) {
-        const d = data as TideMemory;
+        const d = new TideMemory(data.length);
+        d.set(data);
+
         // Read field 0 (name) - this is part of the TideMemory structure
         const name = new TextDecoder().decode(d.GetValue(0));
 
         // Read all other fields
         const version = new TextDecoder().decode(d.GetValue(1));
+
+        // Check name and version in static members if set
+        if(this._name != undefined && this._version != undefined){
+            if(name != this._name || version != this._version) throw Error("Name and Version in decoded data don't match this object's set name and version.")
+        }
 
         const expiry = BaseTideRequest.uint8ArrayToUint32LE(d.GetValue(2));
 
@@ -157,8 +196,8 @@ export default class BaseTideRequest {
         const authorizerCert = d.GetValue(8);
         const policy = d.GetValue(9);
 
-        // Create a new BaseTideRequest with the decoded data
-        const request = new BaseTideRequest(name, version, authFlow, draft, dynamicData);
+        // Create a new instance using 'this' constructor to support subclasses
+        const request = new this(name, version, authFlow, draft, dynamicData);
 
         // Set the remaining fields
         request.expiry = expiry;
