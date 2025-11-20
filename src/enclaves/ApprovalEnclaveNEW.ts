@@ -39,7 +39,7 @@ class OperatorApprovalResponse extends RequestToApprove{
         return (
             object != null &&
             typeof object.id === 'string' &&
-            object.request instanceof Uint8Array &&
+            (object.request instanceof Uint8Array || object.request == null) &&
             Object.values(Status).includes(object.status)
         );
     }
