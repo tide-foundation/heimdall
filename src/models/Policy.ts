@@ -9,7 +9,7 @@ export class Policy{
     params: PolicyParameters;
 
     dataToVerify: TideMemory | undefined;
-    signature: TideMemory | undefined;
+    signature: Uint8Array | undefined;
 
     constructor(data: {version: string, contractId: string, modelId: string, keyId: string, params: Map<string, any>} | TideMemory | Uint8Array){
         if(data instanceof Uint8Array){
@@ -25,7 +25,7 @@ export class Policy{
 
             const sigRes = {result:null};
             if(d.TryGetValue(1, sigRes)){
-                this,this.signature = sigRes.result;
+                this.signature = sigRes.result;
             }
         }else{
             if(typeof data["version"] !== "string") throw 'Version is not a string';
