@@ -1,3 +1,4 @@
+import { bytesToBase64 } from "../utils.js";
 import { TideMemory } from "../wrapper.js";
 import { Policy } from "./Policy.js";
 
@@ -167,6 +168,22 @@ export default class BaseTideRequest {
 
         return req;
     }
+
+    ToString() {
+        return "{" +
+            "\"Name\": \"" + this.name + "\"," +
+            "\"Version\": \"" + this.version + "\"," +
+            "\"Expiry\": \"" + this.expiry + "\"," +
+            "\"Draft\": \"" + bytesToBase64(this.draft) + "\"," +
+            "\"DynamicData\": \"" + bytesToBase64(this.dyanmicData) + "\"," +
+            "\"AuthFlow\": \"" + this.authFlow + "\"," +
+            "\"Authorizer\": \"" + bytesToBase64(this.authorizer) + "\"," +
+            "\"AuthorizerSignatureOfThisRequest\": \"" + bytesToBase64(this.authorization) + "\"," +
+            "\"DataToAuthenticateAuthorizer\": \"" + bytesToBase64(this.authorizerCert) + "\"," +
+            "\"Policy\": \"" + bytesToBase64(this.policy) + "\"" +
+            "}";
+    }
+
 
     static decode(data: Uint8Array) {
         const d = new TideMemory(data.length);
