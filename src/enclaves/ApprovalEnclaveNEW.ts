@@ -1,5 +1,5 @@
 import {Heimdall, HiddenInit, windowType} from "../heimdall";
-import { TideMemory } from "../wrapper";
+import { TideMemory } from "asgard-tide";
 import { RequestEnclave } from "./RequestEnclave";
 
 export class ApprovalEnclaveNew extends RequestEnclave{

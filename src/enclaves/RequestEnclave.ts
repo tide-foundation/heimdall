@@ -1,6 +1,6 @@
-import BaseTideRequest from "../models/BaseTideRequest";
+import { BaseTideRequest } from "asgard-tide";
 import { Heimdall, HiddenInit, windowType } from "../heimdall";
-import { TideMemory } from "../wrapper";
+import { TideMemory } from "asgard-tide";
 
 export class RequestEnclave extends Heimdall<RequestEnclave>{
     name: string = "request";
