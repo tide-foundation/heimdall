@@ -38,6 +38,9 @@
     "url": "https://github.com/tide-foundation/heimdall/issues"
   },
   "homepage": "https://github.com/tide-foundation/heimdall#readme",
+  "dependencies": {
+    "asgard-tide": "file:~/asgard"
+  },
   "devDependencies": {
     "typescript": "^5.8.3"
   }
