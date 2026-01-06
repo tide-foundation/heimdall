@@ -17,6 +17,6 @@ export default class PolicySignRequest extends BaseTideRequest {
     }
 
     getRequestedPolicy(){
-        return new Policy(this.draft.GetValue(0));
+        return Policy.from(this.draft.GetValue(0));
     }
 }

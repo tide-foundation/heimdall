@@ -191,7 +191,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         return requestToInitialize.addCreationSignature(requestToInitializeDetails.creationTime, creationSig).encode();
     }
 
-    async execute(data: TideMemory): Promise<Uint8Array[]>{
+    async execute(data: TideMemory, waitForAll: boolean = false): Promise<Uint8Array[]>{
         this.checkEnclaveOpen();
         await this.initDone;
         const pre_resp = this.recieve("sign request completed");
@@ -200,6 +200,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             message:{
                 flow: "sign",
                 request: data,
+                waitForAll,
             }
         })
         const resp = await pre_resp;
