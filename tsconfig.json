@@ -1,9 +1,11 @@
 {
   "compilerOptions": {
     "esModuleInterop": true,
-    "declaration": true, 
-    "target": "es2017",
+    "declaration": true,
+    "target": "es2021",
     "sourceMap": true,
+    "moduleResolution": "node",
+    "skipLibCheck": true
   },
   "include": ["src"]
 }

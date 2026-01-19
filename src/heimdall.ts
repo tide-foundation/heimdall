@@ -21,6 +21,7 @@ export interface HeimdallConstructor{
     homeOrkOrigin: string,
     voucherURL: string,
     signed_client_origin: string;
+    isRunningLocal?: boolean
 }
 export abstract class Heimdall<T> implements EnclaveFlow<T> {
     name: string;
@@ -29,6 +30,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     voucherURL: string;
     signed_client_origin: string;
     vendorId: string;
+    isRunningLocal: boolean;
     
     private enclaveWindow: WindowProxy;
 
@@ -37,6 +39,8 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
         this.voucherURL = init.voucherURL;
         this.signed_client_origin = init.signed_client_origin;
         this.vendorId = init.vendorId;
+
+        this.isRunningLocal = init.isRunningLocal != null ? init.isRunningLocal : false;
     }
 
     enclaveClosed(){
@@ -134,6 +138,8 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
             iframe.id = "heimdall"; // in case multiple frames get popped up - we only want one
             iframe.setAttribute('aria-hidden', 'true'); // accessibility hint
 
+            if(this.isRunningLocal) iframe.allow = "local-network-access";
+
             // 2. Add it to the document
             document.body.appendChild(iframe);
 
@@ -211,6 +217,17 @@ export enum windowType{
     Redirect,
     Hidden
 };
+export interface HiddenInit{
+    doken: string;
+    /**
+     * @returns A refresh doken for Heimdall
+     */
+    dokenRefreshCallback: () => Promise<string> | undefined;
+    /**
+     * @returns A function that re authenticates the current user from the client. (Used to update their session key on Identity System). Returns a new doken too.
+     */
+    requireReloginCallback: () => Promise<string>;
+}
 interface EnclaveFlow<T>{
     name: string;
     _windowType: windowType;
