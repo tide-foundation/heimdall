@@ -166,7 +166,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     }
 
     private closePopupEnclave() {
-        this.enclaveWindow.close();
+        this.enclaveWindow?.close();
     }
 
     private async waitForWindowPostMessage(responseTypeToAwait: string) {

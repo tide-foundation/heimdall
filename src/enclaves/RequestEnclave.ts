@@ -32,6 +32,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
                     }
                 });
             }else{
+                this.close();
                 // If injecting iframe fails, try setting it as a popup and opening it
                 this._windowType = windowType.Popup;
                 this.open().then((success: boolean) => {
