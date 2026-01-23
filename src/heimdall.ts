@@ -154,7 +154,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
             });
 
             const timeout = new Promise<boolean>((resolve) => {
-                setTimeout(() => resolve(false), 2000); // 2-second timeout
+                setTimeout(() => resolve(false), 4000); // 4-second timeout
             });
 
             const loadedResult = await Promise.race([iframeErrorListener, pageLoaded, timeout]);
