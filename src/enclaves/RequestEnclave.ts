@@ -33,8 +33,10 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
 
         if(this.state !== State.Closed) return; // someone has already called init
         
-        this.recieve("hidden enclave").then((data) => this.handleHiddenEnclaveResponse(data));
-        this.checkEnclaveOpen(); // try iframe immediately
+        if(this._windowType === windowType.Hidden){
+            this.recieve("hidden enclave").then((data) => this.handleHiddenEnclaveResponse(data));
+            this.checkEnclaveOpen(); // try iframe immediately
+        }
 
         return this;
     }
@@ -98,8 +100,8 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             // Convert hidden enclave into popup
             this.close();
             console.log(`[HEIMDALL] Storage issue found on hidden iframe. Trying popup window next`);
-            this._windowType = windowType.Popup;
             this.state = State.FailedIFrameInitialization;
+            this.checkEnclaveOpen();
         }
 
         this.recieve("hidden enclave").then((data) => this.handleHiddenEnclaveResponse(data));
@@ -137,8 +139,8 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
                     return;
                 case State.Closed:
                     // if closed try iframe
-                    this.state = State.InitializingIFrame;
-                    this._windowType = windowType.Hidden;
+                    if(this._windowType === windowType.Hidden) this.state = State.InitializingIFrame;
+                    else if(this._windowType === windowType.Popup) this.state = State.InitializingPopUp;
                     break;
                 case State.FailedIFrameInitialization:
                     // if failed iframe try popup
@@ -172,9 +174,14 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
                     console.log(`[HEIMDALL] Successfully opened ${windowType[this._windowType]} window`);
                     this.state = State.Ready;
                 }else {
-                    if(this.state === State.InitializingIFrame) this.state = State.FailedIFrameInitialization;
-                    else if(this.state === State.InitializingPopUp) this.state = State.FailedPopUpInitialization;
-                    console.error('Error opening enclave of type: ' + windowType[this._windowType]);
+                    if(this.state === State.InitializingIFrame){
+                        this.state = State.FailedIFrameInitialization;
+                        console.error('Error opening enclave of type: ' + windowType[this._windowType] + '. Trying popup.');
+                        this.checkEnclaveOpen();
+                    }else if(this.state === State.InitializingPopUp){
+                        this.state = State.FailedIFrameInitialization; // so next checkEnclaveOpen call tries popup again
+                        console.error('Error opening enclave of type: ' + windowType[this._windowType]);
+                    }
                 }
             });
         }
