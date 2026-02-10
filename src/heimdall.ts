@@ -32,7 +32,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     vendorId: string;
     isRunningLocal: boolean;
     
-    private enclaveWindow: WindowProxy;
+    private enclaveWindow: WindowProxy | undefined;
 
     constructor(init: HeimdallConstructor){
         this.enclaveOrigin = init.homeOrkOrigin; 
@@ -44,6 +44,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     }
 
     enclaveClosed(){
+        if(!this.enclaveWindow) return true;
         return this.enclaveWindow.closed;
     }
 
@@ -185,7 +186,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     }
 
     private sendPostWindowMessage(message: any) {
-        this.enclaveWindow.postMessage(message, this.enclaveOrigin);
+        this.enclaveWindow?.postMessage(message, this.enclaveOrigin);
     }
 
     private processEvent(data: any, origin: string, expectedType: string){
