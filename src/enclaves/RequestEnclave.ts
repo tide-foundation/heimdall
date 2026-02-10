@@ -2,11 +2,21 @@ import { BaseTideRequest } from "asgard-tide";
 import { Heimdall, HiddenInit, windowType } from "../heimdall";
 import { TideMemory } from "asgard-tide";
 
+enum State{
+    Closed,
+    InitializingIFrame,
+    FailedIFrameInitialization,
+    InitializingPopUp,
+    FailedPopUpInitialization,
+    Ready
+}
+
 export class RequestEnclave extends Heimdall<RequestEnclave>{
     name: string = "request";
     protected doken: string;
     protected dokenRefreshCallback: () => Promise<string> | undefined;
     protected requireReloginCallback: () => Promise<string>;
+    private state: State = State.Closed;
 
     _windowType: windowType = windowType.Hidden;
 
@@ -21,33 +31,10 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         this.dokenRefreshCallback = data.dokenRefreshCallback;
         this.requireReloginCallback = data.requireReloginCallback;
 
+        if(this.state !== State.Closed) return; // someone has already called init
+        
         this.recieve("hidden enclave").then((data) => this.handleHiddenEnclaveResponse(data));
-
-        this.open().then((success: boolean) => {
-            if(success){
-                this.send({
-                    type: "init",
-                    message: {
-                        doken: this.doken
-                    }
-                });
-            }else{
-                this.close();
-                // If injecting iframe fails, try setting it as a popup and opening it
-                this._windowType = windowType.Popup;
-                this.open().then((success: boolean) => {
-                    if(success){
-                        this.send({
-                            type: "init",
-                            message: {
-                                doken: this.doken
-                            }
-                        });
-                    }
-                    else throw 'Error opening all types of Request Enclave';
-                });
-            }
-        });
+        this.checkEnclaveOpen(); // try iframe immediately
 
         return this;
     }
@@ -103,25 +90,16 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         // }
         if(msg == "session key mismatch"){
             this.close();
+            console.log(`[HEIMDALL] Session key mismatch between enclave and doken. Reinitiating login`);
             this.requireReloginCallback(); // should initiate a full client page reload, killing this
+            this.state = State.Closed;
         }
         else if(msg == "storage issue"){
             // Convert hidden enclave into popup
             this.close();
+            console.log(`[HEIMDALL] Storage issue found on hidden iframe. Trying popup window next`);
             this._windowType = windowType.Popup;
-            this.open().then((success: boolean) => {
-                if(success){
-                    this.send({
-                        type: "init",
-                        message: {
-                            doken: this.doken
-                        }
-                    });
-                }else{
-                    window.alert("There was an issue opening the fallback popup on this page. Please enable popups or let the administrator know about this problem. For more information, visit https://tide.org/browserwindow");
-                    throw "Could not open popup";
-                }
-            });
+            this.state = State.FailedIFrameInitialization;
         }
 
         this.recieve("hidden enclave").then((data) => this.handleHiddenEnclaveResponse(data));
@@ -153,9 +131,36 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     }
     checkEnclaveOpen(){
         if(this.enclaveClosed()){
-            // Enclave was closed!
+            switch(this.state){
+                case State.InitializingIFrame:
+                case State.InitializingPopUp:
+                    return;
+                case State.Closed:
+                    // if closed try iframe
+                    this.state = State.InitializingIFrame;
+                    this._windowType = windowType.Hidden;
+                    break;
+                case State.FailedIFrameInitialization:
+                    // if failed iframe try popup
+                    this.state = State.InitializingPopUp;
+                    this._windowType = windowType.Popup;
+                    break;
+                case State.FailedPopUpInitialization:
+                    // if failed popup give up
+                    console.warn("[HEIMDALL] Failed to initialize the popup enclave")
+                    window.alert("There was an issue opening the fallback popup on this page. Please enable popups or let the administrator know about this problem. For more information, visit https://tide.org/browserwindow");
+                    return;
+                case State.Ready:
+                    // if ready (but no enclave) try popup again
+                    console.error("[HEIMDALL] State says ready but no enclave open. Trying popup again");
+                    this.state = State.InitializingPopUp;
+                    this._windowType = windowType.Popup;
+                    break;
+            }
+            // Enclave is closed!
             // We need to reopen the enclave and await the init again
             this.initDone = this.recieve("init done");
+            console.log(`[HEIMDALL] Attempting to open ${windowType[this._windowType]} window`);
             this.open().then((success: boolean) => {
                 if(success){
                     this.send({
@@ -164,7 +169,13 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
                             doken: this.doken
                         }
                     });
-                }else throw 'Error opening enclave';
+                    console.log(`[HEIMDALL] Successfully opened ${windowType[this._windowType]} window`);
+                    this.state = State.Ready;
+                }else {
+                    if(this.state === State.InitializingIFrame) this.state = State.FailedIFrameInitialization;
+                    else if(this.state === State.InitializingPopUp) this.state = State.FailedPopUpInitialization;
+                    console.error('Error opening enclave of type: ' + windowType[this._windowType]);
+                }
             });
         }
     }
