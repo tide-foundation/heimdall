@@ -8,9 +8,19 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     protected dokenRefreshCallback: () => Promise<string> | undefined;
     protected requireReloginCallback: () => Promise<string>;
 
-    _windowType: windowType = windowType.Hidden;
+    // Safari partitions localStorage for cross-origin iframes and does not support
+    // requestStorageAccess({localStorage: true}). Skip straight to popup.
+    private static isSafari(): boolean {
+        const ua = navigator.userAgent;
+        return ua.includes("Safari") && !ua.includes("Chrome") && !ua.includes("Chromium");
+    }
 
-    protected initDone: Promise<any> = this.recieve("init done");
+    _windowType: windowType = RequestEnclave.isSafari() ? windowType.Popup : windowType.Hidden;
+
+    protected initDone: Promise<any> = Promise.race([
+        this.recieve("init done"),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Enclave init timed out")), 15000))
+    ]);
 
     init(data: HiddenInit): RequestEnclave {
         if(!data.doken) throw 'Doken not provided';
@@ -45,9 +55,9 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
                         });
                     }
                     else throw 'Error opening all types of Request Enclave';
-                });
+                }).catch(e => console.error("[HEIMDALL]", e));
             }
-        });
+        }).catch(e => console.error("[HEIMDALL]", e));
 
         return this;
     }
