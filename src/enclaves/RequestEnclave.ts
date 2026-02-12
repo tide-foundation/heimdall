@@ -18,12 +18,18 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     protected requireReloginCallback: () => Promise<string>;
     private state: State = State.Closed;
 
+    protected bgUrl: string;
+    protected logoUrl: string;
+
     _windowType: windowType = windowType.Hidden;
 
     protected initDone: Promise<any> = this.recieve("init done");
 
     init(data: HiddenInit): RequestEnclave {
         if(!data.doken) throw 'Doken not provided';
+
+        if(data.backgroundUrl) this.bgUrl = data.backgroundUrl
+        if(data.logoUrl) this.logoUrl = data.logoUrl
 
         this.doken = data.doken;
         let parsedDoken = decodeToken(this.doken);
@@ -128,6 +134,11 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
 
         // Set requestsed enclave
         url.searchParams.set("type", this.name);
+
+        this.doken
+
+        if(this.bgUrl) url.searchParams.set("backgroundUrl", this.bgUrl)
+        if(this.logoUrl) url.searchParams.set("logoUrl", this.logoUrl)
 
         return url;
     }

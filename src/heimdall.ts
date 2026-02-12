@@ -219,6 +219,10 @@ export enum windowType{
     Hidden
 };
 export interface HiddenInit{
+    backgroundUrl: string;
+
+    logoUrl: string;
+
     doken: string;
     /**
      * @returns A refresh doken for Heimdall
