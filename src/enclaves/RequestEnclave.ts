@@ -24,6 +24,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     _windowType: windowType = windowType.Hidden;
 
     protected initDone: Promise<any> = this.recieve("init done");
+    private sessionId?: string;
 
     init(data: HiddenInit): RequestEnclave {
         if(!data.doken) throw 'Doken not provided';
@@ -36,6 +37,8 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         if(parsedDoken["t.uho"]) this.enclaveOrigin = parsedDoken["t.uho"]; // use tidecloak set user home ork from doken
         this.dokenRefreshCallback = data.dokenRefreshCallback;
         this.requireReloginCallback = data.requireReloginCallback;
+
+        this.handleSessionCheck();
 
         if(this.state !== State.Closed) return; // someone has already called init
         
@@ -176,10 +179,14 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             console.log(`[HEIMDALL] Attempting to open ${windowType[this._windowType]} window`);
             this.open().then((success: boolean) => {
                 if(success){
+                    const session = new Uint32Array(5);
+                    self.crypto.getRandomValues(session);
+                    this.sessionId = Array.from(session, v => v.toString(16).padStart(8, '0')).join('');
                     this.send({
                         type: "init",
                         message:{
-                            doken: this.doken
+                            doken: this.doken,
+                            sessionId: this.sessionId
                         }
                     });
                     console.log(`[HEIMDALL] Successfully opened ${windowType[this._windowType]} window`);
@@ -279,6 +286,14 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
                 doken: this.doken
             }
         });
+    }
+
+    async handleSessionCheck() {
+        this.recieve("session check").then(() => this.handleSessionCheck());
+        this.send({
+            type: "current session",
+            message: this.sessionId
+        })
     }
 
     async onerror(data: any) {
