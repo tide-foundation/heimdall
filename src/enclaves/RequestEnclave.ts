@@ -241,6 +241,9 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             }
         })
         const resp = await pre_resp;
+        if(typeof resp.error === 'string') {
+            throw Error(resp.error);
+        }
         if(!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
         if(!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
         return resp;
@@ -257,6 +260,9 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             }
         })
         const resp = await pre_resp;
+        if(typeof resp.error === 'string') {
+            throw Error(resp.error);
+        }        
         if(!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
         if(!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
         return resp;
@@ -273,6 +279,9 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             }
         })
         const resp = await pre_resp;
+        if(typeof resp.error === 'string') {
+            throw Error(resp.error);
+        }
         if(!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
         if(!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
         return resp;
