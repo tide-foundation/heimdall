@@ -18,18 +18,27 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     protected requireReloginCallback: () => Promise<string>;
     private state: State = State.Closed;
 
+    protected bgUrl: string;
+    protected logoUrl: string;
+
     _windowType: windowType = windowType.Hidden;
 
     protected initDone: Promise<any> = this.recieve("init done");
+    private sessionId?: string;
 
     init(data: HiddenInit): RequestEnclave {
         if(!data.doken) throw 'Doken not provided';
+
+        if(data.backgroundUrl) this.bgUrl = data.backgroundUrl
+        if(data.logoUrl) this.logoUrl = data.logoUrl
 
         this.doken = data.doken;
         let parsedDoken = decodeToken(this.doken);
         if(parsedDoken["t.uho"]) this.enclaveOrigin = parsedDoken["t.uho"]; // use tidecloak set user home ork from doken
         this.dokenRefreshCallback = data.dokenRefreshCallback;
         this.requireReloginCallback = data.requireReloginCallback;
+
+        this.handleSessionCheck();
 
         if(this.state !== State.Closed) return; // someone has already called init
         
@@ -129,6 +138,11 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         // Set requestsed enclave
         url.searchParams.set("type", this.name);
 
+        this.doken
+
+        if(this.bgUrl) url.searchParams.set("backgroundUrl", this.bgUrl)
+        if(this.logoUrl) url.searchParams.set("logoUrl", this.logoUrl)
+
         return url;
     }
     checkEnclaveOpen(){
@@ -165,10 +179,14 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             console.log(`[HEIMDALL] Attempting to open ${windowType[this._windowType]} window`);
             this.open().then((success: boolean) => {
                 if(success){
+                    const session = new Uint32Array(5);
+                    self.crypto.getRandomValues(session);
+                    this.sessionId = Array.from(session, v => v.toString(16).padStart(8, '0')).join('');
                     this.send({
                         type: "init",
                         message:{
-                            doken: this.doken
+                            doken: this.doken,
+                            sessionId: this.sessionId
                         }
                     });
                     console.log(`[HEIMDALL] Successfully opened ${windowType[this._windowType]} window`);
@@ -223,6 +241,9 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             }
         })
         const resp = await pre_resp;
+        if(typeof resp.error === 'string') {
+            throw Error(resp.error);
+        }
         if(!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
         if(!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
         return resp;
@@ -239,6 +260,9 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             }
         })
         const resp = await pre_resp;
+        if(typeof resp.error === 'string') {
+            throw Error(resp.error);
+        }        
         if(!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
         if(!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
         return resp;
@@ -255,6 +279,9 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             }
         })
         const resp = await pre_resp;
+        if(typeof resp.error === 'string') {
+            throw Error(resp.error);
+        }
         if(!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
         if(!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
         return resp;
@@ -268,6 +295,14 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
                 doken: this.doken
             }
         });
+    }
+
+    async handleSessionCheck() {
+        this.recieve("session check").then(() => this.handleSessionCheck());
+        this.send({
+            type: "current session",
+            message: this.sessionId
+        })
     }
 
     async onerror(data: any) {
