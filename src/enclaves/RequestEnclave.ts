@@ -1,6 +1,7 @@
-import { BaseTideRequest } from "asgard-tide";
 import { Heimdall, HiddenInit, windowType } from "../heimdall";
-import { TideMemory } from "asgard-tide";
+import { Cryptide, Models, Clients, Tools } from "tide-js";
+const TideMemory = Tools.TideMemory;
+const BaseTideRequest = Models.BaseTideRequest;
 
 enum State{
     Closed,
@@ -205,7 +206,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         }
     }
 
-    async initializeRequest(request: TideMemory): Promise<Uint8Array>{
+    async initializeRequest(request: Tools.TideMemory): Promise<Uint8Array>{
         // construct request to sign this request's creation
         const requestToInitialize = BaseTideRequest.decode(request);
         const requestToInitializeDetails = await requestToInitialize.getRequestInitDetails();
@@ -228,7 +229,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         return requestToInitialize.addCreationSignature(requestToInitializeDetails.creationTime, creationSig).encode();
     }
 
-    async execute(data: TideMemory, waitForAll: boolean = false): Promise<Uint8Array[]>{
+    async execute(data: Tools.TideMemory, waitForAll: boolean = false): Promise<Uint8Array[]>{
         this.checkEnclaveOpen();
         await this.initDone;
         const pre_resp = this.recieve("sign request completed");

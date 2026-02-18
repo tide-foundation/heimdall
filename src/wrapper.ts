@@ -1,7 +1,8 @@
-import { TideMemory } from "asgard-tide";
+import { Tools } from "tide-js";
+const TideMemory = Tools.TideMemory;
 export const version = "1";
 
-export function wrapper(arr: NestedEntry): TideMemory {
+export function wrapper(arr: NestedEntry): Tools.TideMemory {
     // If array is only Uint8Arrays - create a TideMemory out of it 
     // If there is any entry in an array that is another array
     //     -> Go inside that array and repeat the process
