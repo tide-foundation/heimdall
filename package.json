@@ -39,7 +39,7 @@
   },
   "homepage": "https://github.com/tide-foundation/heimdall#readme",
   "dependencies": {
-    "asgard-tide": "file:~/asgard"
+    "tide-js": "file:~/project/tide-js"
   },
   "devDependencies": {
     "typescript": "^5.8.3"

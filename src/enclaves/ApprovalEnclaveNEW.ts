@@ -1,5 +1,5 @@
 import {Heimdall, HiddenInit, windowType} from "../heimdall";
-import { TideMemory } from "asgard-tide";
+import { Cryptide, Models, Clients, Tools } from "tide-js";
 import { RequestEnclave } from "./RequestEnclave";
 
 export class ApprovalEnclaveNew extends RequestEnclave{
@@ -31,7 +31,7 @@ export class ApprovalEnclaveNew extends RequestEnclave{
 }
 class RequestToApprove{
     id: string;
-    request: TideMemory;
+    request: Tools.TideMemory;
 }
 class OperatorApprovalResponse extends RequestToApprove{
     status: Status;
