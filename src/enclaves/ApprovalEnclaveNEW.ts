@@ -1,5 +1,5 @@
 import {Heimdall, HiddenInit, windowType} from "../heimdall";
-import { Cryptide, Models, Clients, Tools } from "tide-js";
+import { Cryptide, Models, Clients, Tools } from "@tide/js";
 import { RequestEnclave } from "./RequestEnclave";
 
 export class ApprovalEnclaveNew extends RequestEnclave{
