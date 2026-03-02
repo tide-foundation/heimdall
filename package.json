@@ -32,7 +32,7 @@
     "tide"
   ],
   "author": "Tide",
-  "license": "ISC",
+  "license": "SEE LICENSE IN LICENSE",
   "types": "./heimdall.d.ts",
   "bugs": {
     "url": "https://github.com/tide-foundation/heimdall/issues"
