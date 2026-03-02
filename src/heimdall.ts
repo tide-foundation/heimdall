@@ -74,14 +74,14 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
                 break;
         }
     }
-    public async recieve(type: string): Promise<any> {
+    public async recieve(type: string, silent: boolean = false): Promise<any> {
         switch(this._windowType){
             case windowType.Popup:
-                return this.waitForWindowPostMessage(type);
+                return this.waitForWindowPostMessage(type, silent);
             case windowType.Redirect:
                 throw new Error("Method not implemented.");
             case windowType.Hidden:
-                return this.waitForWindowPostMessage(type);
+                return this.waitForWindowPostMessage(type, silent);
         }
     }
     public close() {
@@ -170,10 +170,10 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
         this.enclaveWindow?.close();
     }
 
-    private async waitForWindowPostMessage(responseTypeToAwait: string) {
+    private async waitForWindowPostMessage(responseTypeToAwait: string, silent: boolean = false) {
         return new Promise((resolve) => {
             const handler = (event) => {
-                const response = this.processEvent(event.data, event.origin, responseTypeToAwait);
+                const response = this.processEvent(event.data, event.origin, responseTypeToAwait, silent);
                 if (response.ok) {
                     resolve(response.message);
                     window.removeEventListener("message", handler);
@@ -189,7 +189,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
         this.enclaveWindow?.postMessage(message, this.enclaveOrigin);
     }
 
-    private processEvent(data: any, origin: string, expectedType: string){
+    private processEvent(data: any, origin: string, expectedType: string, silent: boolean){
         if (origin !== new URL(this.enclaveOrigin).origin) {
             // Something's not right... The message has come from an unknown domain... 
             return {ok: false, print: false, error: "WRONG WINDOW SENT MESSAGE"};
@@ -205,10 +205,10 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
         }
 
         if(expectedType !== data.type) {
-            console.log("[HEIMDALL] Received type{" + data.type + "} but waiting for type{" + expectedType + "}");
+            if(!silent) console.log("[HEIMDALL] Received type{" + data.type + "} but waiting for type{" + expectedType + "}");
             return {ok: false, print: false, error: "handled error"}
         }else{
-            console.log("[HEIMDALL] Correctly received type{" + data.type + "}");
+            if(!silent) console.log("[HEIMDALL] Correctly received type{" + data.type + "}");
             return {ok: true, message: data.message}
         }
     }

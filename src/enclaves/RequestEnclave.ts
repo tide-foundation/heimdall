@@ -381,7 +381,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     }
 
     async handleSessionCheck() {
-        this.recieve("session check").then(() => this.handleSessionCheck());
+        this.recieve("session check", true).then(() => this.handleSessionCheck());
         this.send({
             type: "current session",
             message: this.sessionId
