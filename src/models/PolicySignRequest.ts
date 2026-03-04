@@ -1,4 +1,4 @@
-import { Cryptide, Models, Clients, Tools, Contracts } from "@tide/js";
+import { Cryptide, Models, Clients, Tools, Contracts } from "@tideorg/js";
 const TideMemory = Tools.TideMemory;
 const BaseTideRequest = Models.BaseTideRequest;
 const Policy = Models.Policy;

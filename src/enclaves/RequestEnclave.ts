@@ -1,5 +1,5 @@
 import { Heimdall, HiddenInit, windowType } from "../heimdall";
-import { Cryptide, Models, Clients, Tools } from "@tide/js";
+import { Cryptide, Models, Clients, Tools } from "@tideorg/js";
 const TideMemory = Tools.TideMemory;
 const BaseTideRequest = Models.BaseTideRequest;
 

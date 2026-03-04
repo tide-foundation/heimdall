@@ -1,4 +1,4 @@
-import { Tools } from "@tide/js";
+import { Tools } from "@tideorg/js";
 const TideMemory = Tools.TideMemory;
 export const version = "1";
 
