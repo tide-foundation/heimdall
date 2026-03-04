@@ -32,7 +32,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     vendorId: string;
     isRunningLocal: boolean;
     
-    private enclaveWindow: WindowProxy;
+    private enclaveWindow: WindowProxy | undefined;
 
     constructor(init: HeimdallConstructor){
         this.enclaveOrigin = init.homeOrkOrigin; 
@@ -44,6 +44,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     }
 
     enclaveClosed(){
+        if(!this.enclaveWindow) return true;
         return this.enclaveWindow.closed;
     }
 
@@ -73,14 +74,14 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
                 break;
         }
     }
-    public async recieve(type: string): Promise<any> {
+    public async recieve(type: string, silent: boolean = false): Promise<any> {
         switch(this._windowType){
             case windowType.Popup:
-                return this.waitForWindowPostMessage(type);
+                return this.waitForWindowPostMessage(type, silent);
             case windowType.Redirect:
                 throw new Error("Method not implemented.");
             case windowType.Hidden:
-                return this.waitForWindowPostMessage(type);
+                return this.waitForWindowPostMessage(type, silent);
         }
     }
     public close() {
@@ -154,7 +155,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
             });
 
             const timeout = new Promise<boolean>((resolve) => {
-                setTimeout(() => resolve(false), 2000); // 2-second timeout
+                setTimeout(() => resolve(false), 4000); // 4-second timeout
             });
 
             const loadedResult = await Promise.race([iframeErrorListener, pageLoaded, timeout]);
@@ -166,13 +167,13 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     }
 
     private closePopupEnclave() {
-        this.enclaveWindow.close();
+        this.enclaveWindow?.close();
     }
 
-    private async waitForWindowPostMessage(responseTypeToAwait: string) {
+    private async waitForWindowPostMessage(responseTypeToAwait: string, silent: boolean = false) {
         return new Promise((resolve) => {
             const handler = (event) => {
-                const response = this.processEvent(event.data, event.origin, responseTypeToAwait);
+                const response = this.processEvent(event.data, event.origin, responseTypeToAwait, silent);
                 if (response.ok) {
                     resolve(response.message);
                     window.removeEventListener("message", handler);
@@ -185,10 +186,10 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     }
 
     private sendPostWindowMessage(message: any) {
-        this.enclaveWindow.postMessage(message, this.enclaveOrigin);
+        this.enclaveWindow?.postMessage(message, this.enclaveOrigin);
     }
 
-    private processEvent(data: any, origin: string, expectedType: string){
+    private processEvent(data: any, origin: string, expectedType: string, silent: boolean){
         if (origin !== new URL(this.enclaveOrigin).origin) {
             // Something's not right... The message has come from an unknown domain... 
             return {ok: false, print: false, error: "WRONG WINDOW SENT MESSAGE"};
@@ -204,10 +205,10 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
         }
 
         if(expectedType !== data.type) {
-            console.log("[HEIMDALL] Received type{" + data.type + "} but waiting for type{" + expectedType + "}");
+            if(!silent) console.log("[HEIMDALL] Received type{" + data.type + "} but waiting for type{" + expectedType + "}");
             return {ok: false, print: false, error: "handled error"}
         }else{
-            console.log("[HEIMDALL] Correctly received type{" + data.type + "}");
+            if(!silent) console.log("[HEIMDALL] Correctly received type{" + data.type + "}");
             return {ok: true, message: data.message}
         }
     }
@@ -218,6 +219,10 @@ export enum windowType{
     Hidden
 };
 export interface HiddenInit{
+    backgroundUrl: string;
+
+    logoUrl: string;
+
     doken: string;
     /**
      * @returns A refresh doken for Heimdall
