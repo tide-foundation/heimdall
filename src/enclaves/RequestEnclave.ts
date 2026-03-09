@@ -127,8 +127,9 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         // Set vendor public
         url.searchParams.set("vendorId", this.vendorId);
 
-        // Set client origin
-        url.searchParams.set("origin", encodeURIComponent(window.location.origin));
+        // Set client origin — only allow override for moz-extension:// contexts (Firefox random UUID issue)
+        const useOverride = this.clientOrigin && window.location.origin.startsWith("moz-extension://");
+        url.searchParams.set("origin", encodeURIComponent(useOverride ? this.clientOrigin : window.location.origin));
 
         // Set client origin signature (by vendor)
         url.searchParams.set("originsig", encodeURIComponent(this.signed_client_origin));

@@ -21,7 +21,8 @@ export interface HeimdallConstructor{
     homeOrkOrigin: string,
     voucherURL: string,
     signed_client_origin: string;
-    isRunningLocal?: boolean
+    isRunningLocal?: boolean;
+    clientOrigin?: string;
 }
 export abstract class Heimdall<T> implements EnclaveFlow<T> {
     name: string;
@@ -31,16 +32,17 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     signed_client_origin: string;
     vendorId: string;
     isRunningLocal: boolean;
-    
+    clientOrigin: string | null;
+
     private enclaveWindow: WindowProxy | undefined;
 
     constructor(init: HeimdallConstructor){
-        this.enclaveOrigin = init.homeOrkOrigin; 
+        this.enclaveOrigin = init.homeOrkOrigin;
         this.voucherURL = init.voucherURL;
         this.signed_client_origin = init.signed_client_origin;
         this.vendorId = init.vendorId;
-
         this.isRunningLocal = init.isRunningLocal != null ? init.isRunningLocal : false;
+        this.clientOrigin = init.clientOrigin || null;
     }
 
     enclaveClosed(){
