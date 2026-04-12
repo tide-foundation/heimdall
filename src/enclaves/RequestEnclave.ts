@@ -249,6 +249,39 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         if(!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
         return resp;
     }
+    /**
+     * Request the ORK enclave to sign a DPoP approval for a server's key.
+     * The enclave signs "tide_sesskeyapproved_dpop_key:<dpop_jkt>" with the Tide Session Key.
+     * @param dpop_jkt - JWK thumbprint of the server's DPoP public key
+     * @returns Base64-encoded DPoP approval signature
+     */
+    async signDpopApproval(dpop_jkt: string): Promise<string>{
+        this.checkEnclaveOpen();
+        await this.initDone;
+        // Use raw postMessage listener since the enclave sends dpopApproval
+        // as a top-level field (not inside data.message)
+        const responsePromise = new Promise<any>((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('DPoP approval timed out')), 10000);
+            const handler = (event: MessageEvent) => {
+                if (event.data && event.data.type === "dpop approval completed") {
+                    clearTimeout(timeout);
+                    window.removeEventListener("message", handler);
+                    resolve(event.data);
+                }
+            };
+            window.addEventListener("message", handler, false);
+        });
+        this.send({
+            type: "dpop approval",
+            message: { dpop_jkt: dpop_jkt }
+        });
+        const resp = await responsePromise;
+        if(typeof resp.error === 'string') {
+            throw Error("DPoP approval failed: " + resp.error);
+        }
+        if(typeof resp.dpopApproval !== 'string') throw 'Expecting dpopApproval string in response';
+        return resp.dpopApproval;
+    }
     async decrypt(data: decryptRequest[], policy?: Uint8Array): Promise<Uint8Array[]>{
         this.checkEnclaveOpen();
         await this.initDone;
