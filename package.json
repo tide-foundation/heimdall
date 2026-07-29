@@ -1,10 +1,10 @@
 {
   "name": "heimdall-tide",
-  "version": "0.1.0",
+  "version": "0.14.8",
   "description": "SDK for communicating with a Tide Enclave",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
-  "typings": "dist/esm/index.d.ts",     
+  "typings": "dist/esm/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/esm/index.js",
@@ -39,7 +39,7 @@
   },
   "homepage": "https://github.com/tide-foundation/heimdall#readme",
   "dependencies": {
-    "@tideorg/js": "file:~/project/tide-js"
+    "@tideorg/js": "^0.14.8"
   },
   "devDependencies": {
     "typescript": "^5.8.3"
