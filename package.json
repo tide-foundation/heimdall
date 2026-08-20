@@ -39,7 +39,7 @@
   },
   "homepage": "https://github.com/tide-foundation/heimdall#readme",
   "dependencies": {
-    "@tideorg/js": "^0.14.20"
+    "@tideorg/js": "^0.14.23"
   },
   "devDependencies": {
     "typescript": "^5.8.3"
