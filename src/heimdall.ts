@@ -346,17 +346,9 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     private processEvent(data: any, origin: string, expectedType: string, silent: boolean){
         if (origin !== new URL(this.enclaveOrigin).origin) {
             // Something's not right... The message has come from an unknown domain... 
-            // Say so. A message that LOOKS like one of ours but arrives from another
-            // origin is the signature of a stale enclaveOrigin (the home ORK moved,
-            // or a newORKUrl update never landed), and it used to be dropped in
-            // complete silence, which made it undiagnosable from the outside.
-            // Only messages carrying a `type` are reported, so unrelated window
-            // traffic (dev-server HMR, extensions, devtools) stays quiet, and the
-            // existing `silent` flag is respected so concurrent waiters do not each
-            // log the same message.
+            // Untyped messages (HMR, extensions) are not ours, so skip them.
             if (!silent && typeof data?.type === "string") {
-                console.warn("[HEIMDALL] Ignored message type{" + data.type + "} from origin{"
-                    + origin + "} while expecting origin{" + new URL(this.enclaveOrigin).origin + "}");
+                console.warn(`[HEIMDALL] Ignored ${data.type} from ${origin}, expected ${new URL(this.enclaveOrigin).origin}`);
             }
             return {ok: false, print: false, error: "WRONG WINDOW SENT MESSAGE"};
         }
