@@ -23,62 +23,8 @@ export interface HeimdallConstructor{
     signed_client_origin: string;
     isRunningLocal?: boolean
 }
-/** How often a guarded wait checks whether the enclave window has gone away. */
-const CLOSE_POLL_INTERVAL_MS = 250;
-
-/**
- * Deadline for a wait that is gated on a HUMAN reading a request and deciding.
- * Not derived from a measurement: the only distribution we have is from
- * automation clicking instantly, which says nothing about how long a person
- * takes. This is a backstop against a wedged window, not a response-time
- * budget; the close-poll is what normally ends these waits.
- */
-export const APPROVAL_WAIT_TIMEOUT_MS = 300_000;
-
-/**
- * Deadline for a MACHINE-gated enclave operation (sign, encrypt, decrypt and
- * their draft/commit variants). Measured end-to-end approval round trips on a
- * 20-node network ran to 18.5s worst case, so this is a little over three times
- * the slowest thing we have actually seen.
- */
-export const REQUEST_WAIT_TIMEOUT_MS = 60_000;
-
-/**
- * Deadline for a popup reporting that it has loaded. The hidden-iframe path next
- * door already bounds the same wait at 4s; a popup is a real window load over the
- * network, so it gets more room.
- */
-const PAGE_LOAD_TIMEOUT_MS = 15_000;
-
-/** Why a guarded wait gave up. Consumers match on `code`. */
-export const HeimdallWaitCode = {
-    /** The enclave window was closed before it answered. */
-    Closed: "enclave.closed",
-    /** The deadline passed with the window still open. */
-    Timeout: "enclave.timeout",
-} as const;
-
-/**
- * Raised by a guarded wait. Carries a `code` so a caller can tell an operator
- * closing the window apart from a window that stopped responding: those are
- * different messages to a user and different things to do next.
- */
-export class HeimdallWaitError extends Error {
-    public readonly code: string;
-    constructor(code: string, message: string) {
-        super(message);
-        this.name = "HeimdallWaitError";
-        this.code = code;
-    }
-}
-
-/** Opt-in guards for a request/response wait. Omitted entirely = wait forever. */
-export interface WaitGuard {
-    /** Reject when the enclave window is closed before it answers. */
-    detectClose?: boolean;
-    /** Reject when this many ms pass with no answer. */
-    timeoutMs?: number;
-}
+// Backstop only; closing the popup is the normal way out.
+const WAIT_TIMEOUT_MS = 300_000;
 
 export abstract class Heimdall<T> implements EnclaveFlow<T> {
     name: string;
@@ -131,29 +77,14 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
                 break;
         }
     }
-    /**
-     * Like `recieve`, but for a request/response exchange that must not hang.
-     * Rejects with a {@link HeimdallWaitError} when the enclave window is closed
-     * or the deadline passes. Use `recieve` for a long-lived subscription.
-     */
-    public async recieveOrFail(type: string, guard: WaitGuard, silent: boolean = false): Promise<any> {
+    public async recieve(type: string, silent: boolean = false, failOnClose: boolean = false): Promise<any> {
         switch(this._windowType){
             case windowType.Popup:
-                return this.waitForWindowPostMessage(type, silent, guard);
+                return this.waitForWindowPostMessage(type, silent, failOnClose);
             case windowType.Redirect:
                 throw new Error("Method not implemented.");
             case windowType.Hidden:
-                return this.waitForWindowPostMessage(type, silent, guard);
-        }
-    }
-    public async recieve(type: string, silent: boolean = false): Promise<any> {
-        switch(this._windowType){
-            case windowType.Popup:
-                return this.waitForWindowPostMessage(type, silent);
-            case windowType.Redirect:
-                throw new Error("Method not implemented.");
-            case windowType.Hidden:
-                return this.waitForWindowPostMessage(type, silent);
+                return this.waitForWindowPostMessage(type, silent, failOnClose);
         }
     }
     public close() {
@@ -180,21 +111,7 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
         const w = window.open(this.getOrkUrl(), "_blank", `width=800,height=800,left=${left_pos}`);
         if(!w) return false;
         this.enclaveWindow = w;
-        try {
-            // Wait for the page to load before we send sensitive data. Bounded, and
-            // reported as a FAILED OPEN rather than thrown: `open()` returns a
-            // boolean and checkEnclaveOpen already knows how to fall back and how
-            // to tell the user when it runs out of options. Rejecting here would
-            // surface as an unhandled rejection at that `.then(success => ...)`.
-            await this.waitForWindowPostMessage("pageLoaded", false, {
-                detectClose: true,
-                timeoutMs: PAGE_LOAD_TIMEOUT_MS,
-            });
-        } catch (e) {
-            console.error("[HEIMDALL] The enclave popup never reported that it loaded: "
-                + (e instanceof Error ? e.message : String(e)));
-            return false;
-        }
+        await this.waitForWindowPostMessage("pageLoaded"); // we need to wait for the page to load before we send sensitive data
         return true;
     }
 
@@ -234,16 +151,10 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
             this.enclaveWindow = iframe.contentWindow;
             if (!this.enclaveWindow) return false;
 
-            // Create an iframe success listener. The wait carries the SAME 4s bound
-            // as the race below so its listener is cleaned up when the race gives
-            // up; previously the race returned false and this listener stayed
-            // attached for the life of the page. The `.catch` matters: an async
-            // executor that throws produces an unhandled rejection, which is why
-            // this is written with `.then/.catch` rather than `await`.
-            const pageLoaded = new Promise<boolean>((res) => {
-                this.waitForWindowPostMessage("pageLoaded", false, { timeoutMs: 4000 })
-                    .then(() => res(true))   // page loaded
-                    .catch(() => res(false)); // never loaded; the race reports the same
+            // Create an iframe success listener
+            const pageLoaded = new Promise<boolean>(async (res) => {
+                await this.waitForWindowPostMessage("pageLoaded");
+                res(true); // page loaded
             });
 
             const timeout = new Promise<boolean>((resolve) => {
@@ -262,79 +173,39 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
         this.enclaveWindow?.close();
     }
 
-    /**
-     * Wait for one message of `responseTypeToAwait` from the enclave window.
-     *
-     * WITHOUT `guard` this behaves exactly as it always has: it waits forever and
-     * can only ever resolve. That is deliberate. Several callers are long-lived
-     * SUBSCRIPTIONS ("hidden enclave", "session check") that re-arm themselves and
-     * legitimately wait for an event that may be minutes away or never come, and a
-     * deadline on those would silently stop the enclave renewing itself.
-     *
-     * WITH `guard` it can also reject, which is what request/response callers want:
-     * an operator who closes the enclave window should get an error, not a promise
-     * that never settles. See `recieveOrFail`.
-     *
-     * The listener is now removed on EVERY exit path. It used to be removed only on
-     * success, so every wait that never completed left its handler attached and the
-     * next message was handled once per abandoned wait.
-     */
-    private async waitForWindowPostMessage(
-        responseTypeToAwait: string,
-        silent: boolean = false,
-        guard?: WaitGuard,
-    ) {
+    private async waitForWindowPostMessage(responseTypeToAwait: string, silent: boolean = false, failOnClose: boolean = false) {
         return new Promise((resolve, reject) => {
-            let settled = false;
-            let closePoll: ReturnType<typeof setInterval> | undefined;
+            let poll: ReturnType<typeof setInterval> | undefined;
             let deadline: ReturnType<typeof setTimeout> | undefined;
-
-            const settle = (finish: () => void) => {
-                if (settled) return;
-                settled = true;
+            const done = () => {
                 window.removeEventListener("message", handler);
-                if (closePoll !== undefined) clearInterval(closePoll);
-                if (deadline !== undefined) clearTimeout(deadline);
-                finish();
+                clearInterval(poll);
+                clearTimeout(deadline);
             };
-
             const handler = (event) => {
                 const response = this.processEvent(event.data, event.origin, responseTypeToAwait, silent);
                 if (response.ok) {
-                    settle(() => resolve(response.message));
+                    done();
+                    resolve(response.message);
                 } else {
                     if(response.print) console.error("[HEIMDALL] Recieved enclave error: " + response.error);
                 }
             };
             window.addEventListener("message", handler, false);
-
-            if (guard?.detectClose) {
-                // The window going away is the common case: an operator closing the
-                // approval popup, or an iframe being torn down. Nothing else notices
-                // it, because a closed window simply stops sending messages.
-                closePoll = setInterval(() => {
-                    if (this.enclaveWindow?.closed) {
-                        settle(() => reject(new HeimdallWaitError(
-                            HeimdallWaitCode.Closed,
-                            // "popup" is load-bearing: consumers classify a cancel by it.
-                            `[HEIMDALL] The enclave popup was closed before it responded `
-                            + `(waiting for '${responseTypeToAwait}')`,
-                        )));
-                    }
-                }, CLOSE_POLL_INTERVAL_MS);
-            }
-
-            if (guard?.timeoutMs !== undefined && guard.timeoutMs > 0) {
-                const ms = guard.timeoutMs;
+            if (failOnClose) {
+                poll = setInterval(() => {
+                    if (!this.enclaveWindow?.closed) return;
+                    done();
+                    // Callers treat a message containing "popup" as a cancel.
+                    reject(new Error(`[HEIMDALL] Enclave popup closed before sending ${responseTypeToAwait}`));
+                }, 250);
                 deadline = setTimeout(() => {
-                    settle(() => reject(new HeimdallWaitError(
-                        HeimdallWaitCode.Timeout,
-                        // Deliberately avoids the words "popup" and "cancel" so this is
-                        // not mistaken for an operator cancelling.
-                        `[HEIMDALL] The enclave window did not respond within `
-                        + `${Math.round(ms / 1000)}s (waiting for '${responseTypeToAwait}')`,
-                    )));
-                }, ms);
+                    done();
+                    reject(Object.assign(
+                        new Error(`[HEIMDALL] No ${responseTypeToAwait} from the enclave within ${WAIT_TIMEOUT_MS / 1000}s`),
+                        { code: "enclave.timeout" },
+                    ));
+                }, WAIT_TIMEOUT_MS);
             }
         });
     }
