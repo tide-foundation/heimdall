@@ -1,4 +1,4 @@
-import {Heimdall, windowType} from "../heimdall";
+import {APPROVAL_WAIT_TIMEOUT_MS, Heimdall, windowType} from "../heimdall";
 
 export class ApprovalEnclave extends Heimdall<ApprovalEnclave>{
     name: string = "approval";
@@ -17,7 +17,10 @@ export class ApprovalEnclave extends Heimdall<ApprovalEnclave>{
     async getAuthorizerAuthentication() {
         await this.initDone;
         // ready to accept reply
-        const pre_response = this.recieve("authentication");
+        const pre_response = this.recieveOrFail("authentication", {
+            detectClose: true,
+            timeoutMs: APPROVAL_WAIT_TIMEOUT_MS,
+        });
 
         // send to enclave
         this.send({
@@ -33,7 +36,10 @@ export class ApprovalEnclave extends Heimdall<ApprovalEnclave>{
     async getAuthorizerApproval(draftToApprove, modelId, expiry, encoding = "bytes", authflow = "") {
         await this.initDone;
         // ready to accept reply
-        const pre_response = this.recieve("approval");
+        const pre_response = this.recieveOrFail("approval", {
+            detectClose: true,
+            timeoutMs: APPROVAL_WAIT_TIMEOUT_MS,
+        });
 
         // send to enclave
         this.send({
