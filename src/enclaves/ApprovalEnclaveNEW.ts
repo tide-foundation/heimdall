@@ -1,4 +1,4 @@
-import {APPROVAL_WAIT_TIMEOUT_MS, Heimdall, HiddenInit, windowType} from "../heimdall";
+import {Heimdall, HiddenInit, windowType} from "../heimdall";
 import { Cryptide, Models, Clients, Tools } from "@tideorg/js";
 import { RequestEnclave } from "./RequestEnclave";
 
@@ -14,12 +14,7 @@ export class ApprovalEnclaveNew extends RequestEnclave{
         // return fully serialized approved requests
         this.checkEnclaveOpen();
         await this.initDone;
-        // Human-gated: the operator reads the requests and decides. Closing the
-        // window is the normal way to say no, and used to hang the caller forever.
-        const pre_resp = this.recieveOrFail("approvals", {
-            detectClose: true,
-            timeoutMs: APPROVAL_WAIT_TIMEOUT_MS,
-        });
+        const pre_resp = this.recieve("approvals", false, true); // reject if the popup is closed
         this.send({
             type: "approvalRequests",
             message:{

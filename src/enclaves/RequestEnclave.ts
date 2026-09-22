@@ -1,4 +1,4 @@
-import {Heimdall, HiddenInit, REQUEST_WAIT_TIMEOUT_MS, windowType} from "../heimdall";
+import { Heimdall, HiddenInit, windowType } from "../heimdall";
 import { Cryptide, Models, Clients, Tools } from "@tideorg/js";
 const TideMemory = Tools.TideMemory;
 const BaseTideRequest = Models.BaseTideRequest;
@@ -232,10 +232,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     async execute(data: Tools.TideMemory, waitForAll: boolean = false): Promise<Uint8Array[]>{
         this.checkEnclaveOpen();
         await this.initDone;
-        const pre_resp = this.recieveOrFail("sign request completed", {
-            detectClose: true,
-            timeoutMs: REQUEST_WAIT_TIMEOUT_MS,
-        });
+        const pre_resp = this.recieve("sign request completed");
         this.send({
             type: "request",
             message:{
@@ -255,10 +252,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     async decrypt(data: decryptRequest[], policy?: Uint8Array): Promise<Uint8Array[]>{
         this.checkEnclaveOpen();
         await this.initDone;
-        const pre_resp = this.recieveOrFail("decrypt request completed", {
-            detectClose: true,
-            timeoutMs: REQUEST_WAIT_TIMEOUT_MS,
-        });
+        const pre_resp = this.recieve("decrypt request completed");
         this.send({
             type: "request",
             message:{
@@ -278,10 +272,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     async encrypt(data: encryptRequest[], policy?: Uint8Array): Promise<Uint8Array[]>{
         this.checkEnclaveOpen();
         await this.initDone;
-        const pre_resp = this.recieveOrFail("encrypt request completed", {
-            detectClose: true,
-            timeoutMs: REQUEST_WAIT_TIMEOUT_MS,
-        });
+        const pre_resp = this.recieve("encrypt request completed");
         this.send({
             type: "request",
             message: {
@@ -302,10 +293,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     async draftEncryption(data: encryptRequest[]) : Promise<Uint8Array> {
         this.checkEnclaveOpen();
         await this.initDone;
-        const pre_resp = this.recieveOrFail("encrypt request completed", {
-            detectClose: true,
-            timeoutMs: REQUEST_WAIT_TIMEOUT_MS,
-        });
+        const pre_resp = this.recieve("encrypt request completed");
         this.send({
             type: "request",
             message: {
@@ -324,10 +312,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     async draftDecryption(data: decryptRequest[]) : Promise<Uint8Array> {
         this.checkEnclaveOpen();
         await this.initDone;
-        const pre_resp = this.recieveOrFail("decrypt request completed", {
-            detectClose: true,
-            timeoutMs: REQUEST_WAIT_TIMEOUT_MS,
-        });
+        const pre_resp = this.recieve("decrypt request completed");
         this.send({
             type: "request",
             message: {
@@ -346,10 +331,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     async commitEncryption(readyEncryptionRequest: Uint8Array, policy: Uint8Array): Promise<Uint8Array[]> {
         this.checkEnclaveOpen();
         await this.initDone;
-        const pre_resp = this.recieveOrFail("commit encrypt request completed", {
-            detectClose: true,
-            timeoutMs: REQUEST_WAIT_TIMEOUT_MS,
-        });
+        const pre_resp = this.recieve("commit encrypt request completed");
         this.send({
             type: "request",
             message: {
@@ -370,10 +352,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     async commitDecryption(readyDecryptionRequest: Uint8Array, policy: Uint8Array): Promise<Uint8Array[]> {
         this.checkEnclaveOpen();
         await this.initDone;
-        const pre_resp = this.recieveOrFail("commit decrypt request completed", {
-            detectClose: true,
-            timeoutMs: REQUEST_WAIT_TIMEOUT_MS,
-        });
+        const pre_resp = this.recieve("commit decrypt request completed");
         this.send({
             type: "request",
             message: {
