@@ -217,6 +217,10 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     private processEvent(data: any, origin: string, expectedType: string, silent: boolean){
         if (origin !== new URL(this.enclaveOrigin).origin) {
             // Something's not right... The message has come from an unknown domain... 
+            // Untyped messages (HMR, extensions) are not ours, so skip them.
+            if (!silent && typeof data?.type === "string") {
+                console.warn(`[HEIMDALL] Ignored ${data.type} from ${origin}, expected ${new URL(this.enclaveOrigin).origin}`);
+            }
             return {ok: false, print: false, error: "WRONG WINDOW SENT MESSAGE"};
         }
 
