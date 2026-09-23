@@ -23,6 +23,9 @@ export interface HeimdallConstructor{
     signed_client_origin: string;
     isRunningLocal?: boolean
 }
+// Backstop only; closing the popup is the normal way out.
+const WAIT_TIMEOUT_MS = 300_000;
+
 export abstract class Heimdall<T> implements EnclaveFlow<T> {
     name: string;
     _windowType: windowType;
@@ -74,14 +77,14 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
                 break;
         }
     }
-    public async recieve(type: string, silent: boolean = false): Promise<any> {
+    public async recieve(type: string, silent: boolean = false, failOnClose: boolean = false): Promise<any> {
         switch(this._windowType){
             case windowType.Popup:
-                return this.waitForWindowPostMessage(type, silent);
+                return this.waitForWindowPostMessage(type, silent, failOnClose);
             case windowType.Redirect:
                 throw new Error("Method not implemented.");
             case windowType.Hidden:
-                return this.waitForWindowPostMessage(type, silent);
+                return this.waitForWindowPostMessage(type, silent, failOnClose);
         }
     }
     public close() {
@@ -170,18 +173,40 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
         this.enclaveWindow?.close();
     }
 
-    private async waitForWindowPostMessage(responseTypeToAwait: string, silent: boolean = false) {
-        return new Promise((resolve) => {
+    private async waitForWindowPostMessage(responseTypeToAwait: string, silent: boolean = false, failOnClose: boolean = false) {
+        return new Promise((resolve, reject) => {
+            let poll: ReturnType<typeof setInterval> | undefined;
+            let deadline: ReturnType<typeof setTimeout> | undefined;
+            const done = () => {
+                window.removeEventListener("message", handler);
+                clearInterval(poll);
+                clearTimeout(deadline);
+            };
             const handler = (event) => {
                 const response = this.processEvent(event.data, event.origin, responseTypeToAwait, silent);
                 if (response.ok) {
+                    done();
                     resolve(response.message);
-                    window.removeEventListener("message", handler);
                 } else {
                     if(response.print) console.error("[HEIMDALL] Recieved enclave error: " + response.error);
                 }
             };
             window.addEventListener("message", handler, false);
+            if (failOnClose) {
+                poll = setInterval(() => {
+                    if (!this.enclaveWindow?.closed) return;
+                    done();
+                    // Callers treat a message containing "popup" as a cancel.
+                    reject(new Error(`[HEIMDALL] Enclave popup closed before sending ${responseTypeToAwait}`));
+                }, 250);
+                deadline = setTimeout(() => {
+                    done();
+                    reject(Object.assign(
+                        new Error(`[HEIMDALL] No ${responseTypeToAwait} from the enclave within ${WAIT_TIMEOUT_MS / 1000}s`),
+                        { code: "enclave.timeout" },
+                    ));
+                }, WAIT_TIMEOUT_MS);
+            }
         });
     }
 
@@ -192,6 +217,10 @@ export abstract class Heimdall<T> implements EnclaveFlow<T> {
     private processEvent(data: any, origin: string, expectedType: string, silent: boolean){
         if (origin !== new URL(this.enclaveOrigin).origin) {
             // Something's not right... The message has come from an unknown domain... 
+            // Untyped messages (HMR, extensions) are not ours, so skip them.
+            if (!silent && typeof data?.type === "string") {
+                console.warn(`[HEIMDALL] Ignored ${data.type} from ${origin}, expected ${new URL(this.enclaveOrigin).origin}`);
+            }
             return {ok: false, print: false, error: "WRONG WINDOW SENT MESSAGE"};
         }
 

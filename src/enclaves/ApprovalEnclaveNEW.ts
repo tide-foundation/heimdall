@@ -14,7 +14,7 @@ export class ApprovalEnclaveNew extends RequestEnclave{
         // return fully serialized approved requests
         this.checkEnclaveOpen();
         await this.initDone;
-        const pre_resp = this.recieve("approvals");
+        const pre_resp = this.recieve("approvals", false, true); // reject if the popup is closed
         this.send({
             type: "approvalRequests",
             message:{
