@@ -3,7 +3,7 @@ import { Cryptide, Models, Clients, Tools } from "@tideorg/js";
 const TideMemory = Tools.TideMemory;
 const BaseTideRequest = Models.BaseTideRequest;
 
-enum State{
+enum State {
     Closed,
     InitializingIFrame,
     FailedIFrameInitialization,
@@ -12,7 +12,7 @@ enum State{
     Ready
 }
 
-export class RequestEnclave extends Heimdall<RequestEnclave>{
+export class RequestEnclave extends Heimdall<RequestEnclave> {
     name: string = "request";
     protected doken: string;
     protected dokenRefreshCallback: () => Promise<string> | undefined;
@@ -28,22 +28,22 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     private sessionId?: string;
 
     init(data: HiddenInit): RequestEnclave {
-        if(!data.doken) throw 'Doken not provided';
+        if (!data.doken) throw 'Doken not provided';
 
-        if(data.backgroundUrl) this.bgUrl = data.backgroundUrl
-        if(data.logoUrl) this.logoUrl = data.logoUrl
+        if (data.backgroundUrl) this.bgUrl = data.backgroundUrl
+        if (data.logoUrl) this.logoUrl = data.logoUrl
 
         this.doken = data.doken;
         let parsedDoken = decodeToken(this.doken);
-        if(parsedDoken["t.uho"]) this.enclaveOrigin = parsedDoken["t.uho"]; // use tidecloak set user home ork from doken
+        if (parsedDoken["t.uho"]) this.enclaveOrigin = parsedDoken["t.uho"]; // use tidecloak set user home ork from doken
         this.dokenRefreshCallback = data.dokenRefreshCallback;
         this.requireReloginCallback = data.requireReloginCallback;
 
         this.handleSessionCheck();
 
-        if(this.state !== State.Closed) return; // someone has already called init
-        
-        if(this._windowType === windowType.Hidden){
+        if (this.state !== State.Closed) return; // someone has already called init
+
+        if (this._windowType === windowType.Hidden) {
             this.recieve("hidden enclave").then((data) => this.handleHiddenEnclaveResponse(data));
             this.checkEnclaveOpen(); // try iframe immediately
         }
@@ -51,7 +51,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         return this;
     }
 
-    async handleHiddenEnclaveResponse(msg: any){
+    async handleHiddenEnclaveResponse(msg: any) {
         // Below is the session key mismatch flow that was implemented but then it was decided a basic relogin was more elegent
         // Keeping it though because it is nearly identical to the flow where a tide user delegates a token to another tide user
         // This would require the second tide user to sign a new delegated token with their current session key 
@@ -100,13 +100,13 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         //     });
 
         // }
-        if(msg == "session key mismatch"){
+        if (msg == "session key mismatch") {
             this.close();
             console.log(`[HEIMDALL] Session key mismatch between enclave and doken. Reinitiating login`);
             this.requireReloginCallback(); // should initiate a full client page reload, killing this
             this.state = State.Closed;
         }
-        else if(msg == "storage issue"){
+        else if (msg == "storage issue") {
             // Convert hidden enclave into popup
             this.close();
             console.log(`[HEIMDALL] Storage issue found on hidden iframe. Trying popup window next`);
@@ -141,21 +141,21 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
 
         this.doken
 
-        if(this.bgUrl) url.searchParams.set("backgroundUrl", this.bgUrl)
-        if(this.logoUrl) url.searchParams.set("logoUrl", this.logoUrl)
+        if (this.bgUrl) url.searchParams.set("backgroundUrl", this.bgUrl)
+        if (this.logoUrl) url.searchParams.set("logoUrl", this.logoUrl)
 
         return url;
     }
-    checkEnclaveOpen(){
-        if(this.enclaveClosed()){
-            switch(this.state){
+    checkEnclaveOpen() {
+        if (this.enclaveClosed()) {
+            switch (this.state) {
                 case State.InitializingIFrame:
                 case State.InitializingPopUp:
                     return;
                 case State.Closed:
                     // if closed try iframe
-                    if(this._windowType === windowType.Hidden) this.state = State.InitializingIFrame;
-                    else if(this._windowType === windowType.Popup) this.state = State.InitializingPopUp;
+                    if (this._windowType === windowType.Hidden) this.state = State.InitializingIFrame;
+                    else if (this._windowType === windowType.Popup) this.state = State.InitializingPopUp;
                     break;
                 case State.FailedIFrameInitialization:
                     // if failed iframe try popup
@@ -179,25 +179,25 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             this.initDone = this.recieve("init done");
             console.log(`[HEIMDALL] Attempting to open ${windowType[this._windowType]} window`);
             this.open().then((success: boolean) => {
-                if(success){
+                if (success) {
                     const session = new Uint32Array(5);
                     self.crypto.getRandomValues(session);
                     this.sessionId = Array.from(session, v => v.toString(16).padStart(8, '0')).join('');
                     this.send({
                         type: "init",
-                        message:{
+                        message: {
                             doken: this.doken,
                             sessionId: this.sessionId
                         }
                     });
                     console.log(`[HEIMDALL] Successfully opened ${windowType[this._windowType]} window`);
                     this.state = State.Ready;
-                }else {
-                    if(this.state === State.InitializingIFrame){
+                } else {
+                    if (this.state === State.InitializingIFrame) {
                         this.state = State.FailedIFrameInitialization;
                         console.error('Error opening enclave of type: ' + windowType[this._windowType] + '. Trying popup.');
                         this.checkEnclaveOpen();
-                    }else if(this.state === State.InitializingPopUp){
+                    } else if (this.state === State.InitializingPopUp) {
                         this.state = State.FailedIFrameInitialization; // so next checkEnclaveOpen call tries popup again
                         console.error('Error opening enclave of type: ' + windowType[this._windowType]);
                     }
@@ -206,7 +206,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         }
     }
 
-    async initializeRequest(request: Tools.TideMemory): Promise<Uint8Array>{
+    async initializeRequest(request: Tools.TideMemory): Promise<Uint8Array> {
         // construct request to sign this request's creation
         const requestToInitialize = BaseTideRequest.decode(request);
         const requestToInitializeDetails = await requestToInitialize.getRequestInitDetails();
@@ -229,47 +229,47 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         return requestToInitialize.addCreationSignature(requestToInitializeDetails.creationTime, creationSig).encode();
     }
 
-    async execute(data: Tools.TideMemory, waitForAll: boolean = false): Promise<Uint8Array[]>{
+    async execute(data: Tools.TideMemory, waitForAll: boolean = false): Promise<Uint8Array[]> {
         this.checkEnclaveOpen();
         await this.initDone;
         const pre_resp = this.recieve("sign request completed");
         this.send({
             type: "request",
-            message:{
+            message: {
                 flow: "sign",
                 request: data,
                 waitForAll,
             }
         })
         const resp = await pre_resp;
-        if(typeof resp.error === 'string') {
+        if (typeof resp.error === 'string') {
             throw Error(resp.error);
         }
-        if(!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
-        if(!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
+        if (!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
+        if (!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
         return resp;
     }
-    async decrypt(data: decryptRequest[], policy?: Uint8Array): Promise<Uint8Array[]>{
+    async decrypt(data: decryptRequest[], policy?: Uint8Array): Promise<Uint8Array[]> {
         this.checkEnclaveOpen();
         await this.initDone;
         const pre_resp = this.recieve("decrypt request completed");
         this.send({
             type: "request",
-            message:{
+            message: {
                 flow: policy ? "policy decrypt" : "decrypt",
                 request: data,
                 policy: policy
             }
         })
         const resp = await pre_resp;
-        if(typeof resp.error === 'string') {
+        if (typeof resp.error === 'string') {
             throw Error(resp.error);
-        }        
-        if(!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
-        if(!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
+        }
+        if (!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
+        if (!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
         return resp;
     }
-    async encrypt(data: encryptRequest[], policy?: Uint8Array): Promise<Uint8Array[]>{
+    async encrypt(data: encryptRequest[], policy?: Uint8Array): Promise<Uint8Array[]> {
         this.checkEnclaveOpen();
         await this.initDone;
         const pre_resp = this.recieve("encrypt request completed");
@@ -282,15 +282,15 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             }
         })
         const resp = await pre_resp;
-        if(typeof resp.error === 'string') {
+        if (typeof resp.error === 'string') {
             throw Error(resp.error);
         }
-        if(!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
-        if(!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
+        if (!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
+        if (!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
         return resp;
     }
 
-    async draftEncryption(data: encryptRequest[]) : Promise<Uint8Array> {
+    async draftEncryption(data: encryptRequest[]): Promise<Uint8Array> {
         this.checkEnclaveOpen();
         await this.initDone;
         const pre_resp = this.recieve("encrypt request completed");
@@ -302,14 +302,14 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             }
         })
         const resp = await pre_resp;
-        if(typeof resp.error === 'string') {
+        if (typeof resp.error === 'string') {
             throw Error(resp.error);
         }
-        if(!(resp instanceof Uint8Array)) throw `Expecting response type to be Uint8Array`;
+        if (!(resp instanceof Uint8Array)) throw `Expecting response type to be Uint8Array`;
         return resp;
     }
 
-    async draftDecryption(data: decryptRequest[]) : Promise<Uint8Array> {
+    async draftDecryption(data: decryptRequest[]): Promise<Uint8Array> {
         this.checkEnclaveOpen();
         await this.initDone;
         const pre_resp = this.recieve("decrypt request completed");
@@ -321,10 +321,10 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             }
         })
         const resp = await pre_resp;
-        if(typeof resp.error === 'string') {
+        if (typeof resp.error === 'string') {
             throw Error(resp.error);
         }
-        if(!(resp instanceof Uint8Array)) throw `Expecting response type to be Uint8Array`;
+        if (!(resp instanceof Uint8Array)) throw `Expecting response type to be Uint8Array`;
         return resp;
     }
 
@@ -341,11 +341,11 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             }
         })
         const resp = await pre_resp;
-        if(typeof resp.error === 'string') {
+        if (typeof resp.error === 'string') {
             throw Error(resp.error);
         }
-        if(!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
-        if(!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
+        if (!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
+        if (!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
         return resp;
     }
 
@@ -362,19 +362,38 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
             }
         })
         const resp = await pre_resp;
-        if(typeof resp.error === 'string') {
+        if (typeof resp.error === 'string') {
             throw Error(resp.error);
         }
-        if(!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
-        if(!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
+        if (!Array.isArray(resp)) throw 'Expecting request completed data to be an array, not' + resp;
+        if (!resp.every((d: any) => d instanceof Uint8Array)) throw 'Expecting all entries in response to be Uint8Arrays';
         return resp;
     }
 
-    async updateDoken(doken: string){
+    async requestExecutorWitnessSignature(dataToWitness: Uint8Array): Promise<Uint8Array> {
+        this.checkEnclaveOpen();
+        await this.initDone;
+        const pre_resp = this.recieve("witness signature completed");
+        this.send({
+            type: "request",
+            message: {
+                flow: "witness signature",
+                request: dataToWitness,
+            }
+        })
+        const resp = await pre_resp;
+        if (typeof resp.error === 'string') {
+            throw Error(resp.error);
+        }
+        if (!(resp instanceof Uint8Array)) throw `Expecting response type to be Uint8Array`;
+        return resp;
+    }
+
+    async updateDoken(doken: string) {
         this.doken = doken;
         this.send({
             type: "doken refresh",
-            message:{
+            message: {
                 doken: this.doken
             }
         });
@@ -389,10 +408,10 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     }
 
     async onerror(data: any) {
-        if(typeof data.message === "string"){
-            switch(data.message){
+        if (typeof data.message === "string") {
+            switch (data.message) {
                 case "expired":
-                    if(!this.dokenRefreshCallback){
+                    if (!this.dokenRefreshCallback) {
                         console.error("[HEIMDALL] Doken on enclave has expired but there is no Doken Refresh Callback registered");
                         return;
                     }
@@ -400,7 +419,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
                     this.doken = await this.dokenRefreshCallback();
                     this.send({
                         type: "doken refresh",
-                        message:{
+                        message: {
                             doken: this.doken
                         }
                     });
@@ -472,11 +491,11 @@ function b64DecodeUnicode(input: string): string {
     }));
 }
 
-interface decryptRequest{
+interface decryptRequest {
     encrypted: Uint8Array;
     tags: string[]
 }
-interface encryptRequest{
+interface encryptRequest {
     data: Uint8Array;
     tags: string[]
 }
