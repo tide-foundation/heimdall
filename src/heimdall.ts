@@ -261,6 +261,10 @@ export interface HiddenInit{
      * @returns A function that re authenticates the current user from the client. (Used to update their session key on Identity System). Returns a new doken too.
      */
     requireReloginCallback: () => Promise<string>;
+    /**
+     * Called when the browser blocks the enclave popup.
+     */
+    popupBlockedCallback?: () => void;
 }
 interface EnclaveFlow<T>{
     name: string;
