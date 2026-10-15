@@ -17,6 +17,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
     protected doken: string;
     protected dokenRefreshCallback: () => Promise<string> | undefined;
     protected requireReloginCallback: () => Promise<string>;
+    protected popupBlockedCallback?: () => void;
     private state: State = State.Closed;
 
     protected bgUrl: string;
@@ -38,6 +39,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
         if(parsedDoken["t.uho"]) this.enclaveOrigin = parsedDoken["t.uho"]; // use tidecloak set user home ork from doken
         this.dokenRefreshCallback = data.dokenRefreshCallback;
         this.requireReloginCallback = data.requireReloginCallback;
+        this.popupBlockedCallback = data.popupBlockedCallback;
 
         this.handleSessionCheck();
 
@@ -200,6 +202,7 @@ export class RequestEnclave extends Heimdall<RequestEnclave>{
                     }else if(this.state === State.InitializingPopUp){
                         this.state = State.FailedIFrameInitialization; // so next checkEnclaveOpen call tries popup again
                         console.error('Error opening enclave of type: ' + windowType[this._windowType]);
+                        this.popupBlockedCallback?.();
                     }
                 }
             });
